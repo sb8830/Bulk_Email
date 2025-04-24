@@ -8,8 +8,7 @@ from io import BytesIO
 from datetime import datetime
 
 st.set_page_config(page_title="📧 Bulk Email Sender", layout="centered")
-# st.set_page_config(page_title="\ud83d\udce7 Bulk Email Sender", layout="centered")
-st.title("\ud83d\udce7 Bulk Email Sender")
+st.title("📧 Bulk Email Sender")
 
 # Step 1: Upload Excel file
 excel_file = st.file_uploader("Upload Excel file", type=["xlsx"])
@@ -48,14 +47,14 @@ bcc_emails = [email.strip() for line in bcc_emails_input.splitlines() for email 
 if excel_file:
     df = pd.read_excel(excel_file)
     df["Send"] = True  # Add a Send column defaulting to True
-    st.subheader("\ud83d\udcc4 Preview and Modify Excel Data")
+    st.subheader("📄 Preview and Modify Excel Data")
     edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, disabled_columns=([]))
 
     if 'Email' not in edited_df.columns or 'Name' not in edited_df.columns:
         st.error("❗ The Excel file must contain at least 'Name' and 'Email' columns.")
     else:
         # Step 5: Button to send emails
-        if st.button("\ud83d\udcec Send Emails"):
+        if st.button("📬 Send Emails"):
             if not (sender_email and app_password):
                 st.warning("⚠️ Please provide your email and app password.")
             else:

@@ -18,8 +18,8 @@ sender_email = st.text_input("Your Email Address", placeholder="your@email.com")
 app_password = st.text_input("App Password", type="password")
 
 # Step 3: Input CC, BCC, Subject, and Message
-cc_emails_input = st.text_area("CC Emails (comma-separated, multiple lines supported)")
-bcc_emails_input = st.text_area("BCC Emails (comma-separated, multiple lines supported)")
+cc_emails_input = st.text_area("CC Emails (one per line)", placeholder="cc1@example.com\ncc2@example.com")
+bcc_emails_input = st.text_area("BCC Emails (one per line)", placeholder="bcc1@example.com\nbcc2@example.com")
 subject = st.text_input("Email Subject", value="Welcome to Our Platform!")
 plain_body = st.text_area("Email Body (Plain Text with Placeholders)", value="""
 Dear {name},
@@ -36,8 +36,8 @@ Team
 """)
 
 # Process CC and BCC inputs
-cc_emails = [email.strip() for email in cc_emails_input.replace('\n', ',').split(',') if email.strip()]
-bcc_emails = [email.strip() for email in bcc_emails_input.replace('\n', ',').split(',') if email.strip()]
+cc_emails = [email.strip() for email in cc_emails_input.splitlines() if email.strip()]
+bcc_emails = [email.strip() for email in bcc_emails_input.splitlines() if email.strip()]
 
 # Step 4: Validate and Show Excel Data
 if excel_file:

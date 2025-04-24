@@ -7,7 +7,8 @@ import streamlit as st
 from io import BytesIO
 from datetime import datetime
 
-st.set_page_config(page_title="\ud83d\udce7 Bulk Email Sender", layout="centered")
+st.set_page_config(page_title="📧 Bulk Email Sender", layout="centered")
+# st.set_page_config(page_title="\ud83d\udce7 Bulk Email Sender", layout="centered")
 st.title("\ud83d\udce7 Bulk Email Sender")
 
 # Step 1: Upload Excel file

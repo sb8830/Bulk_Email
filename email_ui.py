@@ -12,8 +12,8 @@ st.title("📧 Bulk Email Sender")
 excel_file = st.file_uploader("Upload Excel file", type=["xlsx"])
 
 # Step 2: Input SMTP Host, Port, and Credentials
-#smtp_host = st.text_input("SMTP Host", value="smtp.gmail.com")
-#smtp_port = st.number_input("SMTP Port", value=587, step=1)
+smtp_host = st.text_input("SMTP Host", value="smtp.gmail.com")
+smtp_port = st.number_input("SMTP Port", value=587, step=1)
 sender_email = st.text_input("Your Email Address", placeholder="your@email.com")
 app_password = st.text_input("App Password", type="password")
 

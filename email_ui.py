@@ -7,7 +7,7 @@ import streamlit as st
 from io import BytesIO
 from datetime import datetime
 
-st.set_page_config(page_title="📧 Bulk Email Sender", layout="centered")
+st.set_page_config(page_title="Bulk Email Sender", layout="centered")
 st.title("📧 Bulk Email Sender")
 
 # Step 1: Upload Excel file
@@ -48,7 +48,7 @@ if excel_file:
     df = pd.read_excel(excel_file)
     df["Send"] = True  # Add a Send column defaulting to True
     st.subheader("📄 Preview and Modify Excel Data")
-    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, disabled_columns=([]))
+    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)})
 
     if 'Email' not in edited_df.columns or 'Name' not in edited_df.columns:
         st.error("❗ The Excel file must contain at least 'Name' and 'Email' columns.")

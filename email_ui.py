@@ -1,9 +1,11 @@
 import pandas as pd
 import smtplib
+import re
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import streamlit as st
 from io import BytesIO
+from datetime import datetime
 
 st.set_page_config(page_title="📧 Bulk Email Sender", layout="centered")
 st.title("📧 Bulk Email Sender")
@@ -33,9 +35,13 @@ Regards,
 Team
 """)
 
+# Helper function to validate email address
+def is_valid_email(email):
+    return re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
+
 # Process CC and BCC inputs
-cc_emails = [email.strip() for line in cc_emails_input.splitlines() for email in line.split(',') if email.strip()]
-bcc_emails = [email.strip() for line in bcc_emails_input.splitlines() for email in line.split(',') if email.strip()]
+cc_emails = [email.strip() for line in cc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
+bcc_emails = [email.strip() for line in bcc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
 
 # Step 4: Validate and Show Excel Data
 if excel_file:
@@ -51,12 +57,18 @@ if excel_file:
             if not (sender_email and app_password):
                 st.warning("⚠️ Please provide your email and app password.")
             else:
+                log_data = []
                 success_count = 0
                 failed_count = 0
                 for index, row in edited_df.iterrows():
                     recipient = row['Email']
                     name = row.get('Name', 'Customer')
                     password = row.get('Password', 'Not Provided')
+
+                    if not is_valid_email(recipient):
+                        st.error(f"❌ Invalid email format for {name} ({recipient}), skipping.")
+                        failed_count += 1
+                        continue
 
                     msg = MIMEMultipart()
                     msg['From'] = sender_email
@@ -75,12 +87,27 @@ if excel_file:
                         with smtplib.SMTP("smtp.gmail.com", 587) as server:
                             server.starttls()
                             server.login(sender_email, app_password)
-                            server.sendmail(sender_email, to_addrs, msg.as_string())
+                            response = server.sendmail(sender_email, to_addrs, msg.as_string())
 
-                        st.success(f"✅ Email sent to {name} ({recipient})")
-                        success_count += 1
+                        if recipient not in response:
+                            st.success(f"✅ Email sent to {name} ({recipient})")
+                            success_count += 1
+                            log_data.append([name, recipient, "Success", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
+                        else:
+                            st.error(f"❌ Failed to send email to {name} ({recipient}): SMTP did not accept recipient")
+                            failed_count += 1
+                            log_data.append([name, recipient, "SMTP Rejected", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
                     except Exception as e:
                         st.error(f"❌ Failed to send email to {name} ({recipient}): {e}")
                         failed_count += 1
+                        log_data.append([name, recipient, f"Exception: {e}", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
 
                 st.info(f"✅ Total Success: {success_count}, ❌ Total Failed: {failed_count}")
+
+                # Log to downloadable CSV
+                log_df = pd.DataFrame(log_data, columns=["Name", "Email", "Status", "Timestamp"])
+                csv_buffer = BytesIO()
+                log_df.to_csv(csv_buffer, index=False)
+                st.download_button("📥 Download Log CSV", data=csv_buffer.getvalue(), file_name="email_log.csv", mime="text/csv")
+
+                st.warning("⚠️ Note: To track whether an email is opened, you'll need to integrate with a 3rd-party service that provides open tracking or embed a tracking pixel. Gmail and most email clients block read receipts by default for privacy reasons.")

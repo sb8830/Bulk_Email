@@ -7,8 +7,8 @@ import streamlit as st
 from io import BytesIO
 from datetime import datetime
 
-st.set_page_config(page_title="📧 Bulk Email Sender", layout="centered")
-st.title("📧 Bulk Email Sender")
+st.set_page_config(page_title="\ud83d\udce7 Bulk Email Sender", layout="centered")
+st.title("\ud83d\udce7 Bulk Email Sender")
 
 # Step 1: Upload Excel file
 excel_file = st.file_uploader("Upload Excel file", type=["xlsx"])
@@ -46,14 +46,15 @@ bcc_emails = [email.strip() for line in bcc_emails_input.splitlines() for email 
 # Step 4: Validate and Show Excel Data
 if excel_file:
     df = pd.read_excel(excel_file)
-    st.subheader("📄 Preview and Modify Excel Data")
-    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True)
+    df["Send"] = True  # Add a Send column defaulting to True
+    st.subheader("\ud83d\udcc4 Preview and Modify Excel Data")
+    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, disabled_columns=([]))
 
     if 'Email' not in edited_df.columns or 'Name' not in edited_df.columns:
         st.error("❗ The Excel file must contain at least 'Name' and 'Email' columns.")
     else:
         # Step 5: Button to send emails
-        if st.button("📬 Send Emails"):
+        if st.button("\ud83d\udcec Send Emails"):
             if not (sender_email and app_password):
                 st.warning("⚠️ Please provide your email and app password.")
             else:
@@ -61,6 +62,9 @@ if excel_file:
                 success_count = 0
                 failed_count = 0
                 for index, row in edited_df.iterrows():
+                    if not row.get("Send", True):
+                        continue
+
                     recipient = row['Email']
                     name = row.get('Name', 'Customer')
                     password = row.get('Password', 'Not Provided')

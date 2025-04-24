@@ -38,7 +38,7 @@ Your Name"""
                     server.login(sender_email, app_password)
                     server.send_message(msg)
 
-            st.success("Emails sent successfully!")
+            st.success("✅Emails sent successfully!to {row['Email']}")
         except Exception as e:
             st.error(f"Error: {e}")
 

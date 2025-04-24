@@ -17,17 +17,18 @@ app_password = st.text_input("App Password", type="password")
 
 # Step 3: Input email subject and message
 subject = st.text_input("Email Subject", value="Welcome to Our Platform!")
-html_body = st.text_area("Email Body (HTML Supported)", value="""
-<html>
-  <body>
-    <p>Dear {name},</p>
-    <p>Welcome to our platform! Your account has been successfully created.</p>
-    <p><b>Username:</b> {email}<br>
-       <b>Password:</b> {password}</p>
-    <p>Please log in and change your password at your earliest convenience.</p>
-    <p>Regards,<br>Team</p>
-  </body>
-</html>
+plain_body = st.text_area("Email Body (Plain Text with Placeholders)", value="""
+Dear {name},
+
+Welcome to our platform! Your account has been successfully created.
+
+Username: {email}
+Password: {password}
+
+Please log in and change your password at your earliest convenience.
+
+Regards,
+Team
 """)
 
 # Step 4: Validate and Show Excel Data
@@ -51,13 +52,13 @@ if excel_file:
                     name = row.get('Name', 'Customer')
                     password = row.get('Password', 'Not Provided')
 
-                    msg = MIMEMultipart("alternative")
+                    msg = MIMEMultipart()
                     msg['From'] = sender_email
                     msg['To'] = recipient
                     msg['Subject'] = subject
 
-                    body_content = html_body.format(name=name, email=recipient, password=password)
-                    msg.attach(MIMEText(body_content, 'html'))
+                    body_content = plain_body.format(name=name, email=recipient, password=password)
+                    msg.attach(MIMEText(body_content, 'plain'))
 
                     try:
                         with smtplib.SMTP("smtp.gmail.com", 587) as server:

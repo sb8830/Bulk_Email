@@ -18,8 +18,8 @@ sender_email = st.text_input("Your Email Address", placeholder="your@email.com")
 app_password = st.text_input("App Password", type="password")
 
 # Step 3: Input CC, BCC, Subject, and Message
-cc_emails = st.text_input("CC Emails (comma-separated)", value="")
-bcc_emails = st.text_input("BCC Emails (comma-separated)", value="")
+cc_emails_input = st.text_area("CC Emails (comma-separated, multiple lines supported)")
+bcc_emails_input = st.text_area("BCC Emails (comma-separated, multiple lines supported)")
 subject = st.text_input("Email Subject", value="Welcome to Our Platform!")
 plain_body = st.text_area("Email Body (Plain Text with Placeholders)", value="""
 Dear {name},
@@ -34,6 +34,10 @@ Please log in and change your password at your earliest convenience.
 Regards,
 Team
 """)
+
+# Process CC and BCC inputs
+cc_emails = [email.strip() for email in cc_emails_input.replace('\n', ',').split(',') if email.strip()]
+bcc_emails = [email.strip() for email in bcc_emails_input.replace('\n', ',').split(',') if email.strip()]
 
 # Step 4: Validate and Show Excel Data
 if excel_file:
@@ -62,17 +66,12 @@ if excel_file:
                     msg['Subject'] = subject
 
                     if cc_emails:
-                        msg['Cc'] = cc_emails
-                    if bcc_emails:
-                        bcc_list = [email.strip() for email in bcc_emails.split(',')]
-                    else:
-                        bcc_list = []
+                        msg['Cc'] = ", ".join(cc_emails)
 
                     body_content = plain_body.format(name=name, email=recipient, password=password)
                     msg.attach(MIMEText(body_content, 'plain'))
 
-                    to_addrs = [recipient] + cc_emails.split(',') if cc_emails else [recipient]
-                    to_addrs += bcc_list
+                    to_addrs = [recipient] + cc_emails + bcc_emails
 
                     try:
                         with smtplib.SMTP(smtp_host, smtp_port) as server:

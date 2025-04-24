@@ -11,9 +11,7 @@ st.title("📧 Bulk Email Sender")
 # Step 1: Upload Excel file
 excel_file = st.file_uploader("Upload Excel file", type=["xlsx"])
 
-# Step 2: Input SMTP Host, Port, and Credentials
-smtp_host = st.text_input("SMTP Host", value="smtp.gmail.com")
-smtp_port = st.number_input("SMTP Port", value=587, step=1)
+# Step 2: Input Gmail credentials
 sender_email = st.text_input("Your Email Address", placeholder="your@email.com")
 app_password = st.text_input("App Password", type="password")
 
@@ -50,8 +48,8 @@ if excel_file:
     else:
         # Step 5: Button to send emails
         if st.button("📬 Send Emails"):
-            if not (sender_email and app_password and smtp_host and smtp_port):
-                st.warning("⚠️ Please provide all SMTP and login details.")
+            if not (sender_email and app_password):
+                st.warning("⚠️ Please provide your email and app password.")
             else:
                 success_count = 0
                 failed_count = 0
@@ -74,7 +72,7 @@ if excel_file:
                     to_addrs = [recipient] + cc_emails + bcc_emails
 
                     try:
-                        with smtplib.SMTP(smtp_host, smtp_port) as server:
+                        with smtplib.SMTP("smtp.gmail.com", 587) as server:
                             server.starttls()
                             server.login(sender_email, app_password)
                             server.sendmail(sender_email, to_addrs, msg.as_string())

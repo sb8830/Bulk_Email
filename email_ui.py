@@ -11,11 +11,15 @@ st.title("📧 Bulk Email Sender")
 # Step 1: Upload Excel file
 excel_file = st.file_uploader("Upload Excel file", type=["xlsx"])
 
-# Step 2: Input Gmail credentials
-sender_email = st.text_input("Your Gmail", placeholder="your@gmail.com")
+# Step 2: Input SMTP Host, Port, and Credentials
+smtp_host = st.text_input("SMTP Host", value="smtp.gmail.com")
+smtp_port = st.number_input("SMTP Port", value=587, step=1)
+sender_email = st.text_input("Your Email Address", placeholder="your@email.com")
 app_password = st.text_input("App Password", type="password")
 
-# Step 3: Input email subject and message
+# Step 3: Input CC, BCC, Subject, and Message
+cc_emails = st.text_input("CC Emails (comma-separated)", value="")
+bcc_emails = st.text_input("BCC Emails (comma-separated)", value="")
 subject = st.text_input("Email Subject", value="Welcome to Our Platform!")
 plain_body = st.text_area("Email Body (Plain Text with Placeholders)", value="""
 Dear {name},
@@ -42,8 +46,8 @@ if excel_file:
     else:
         # Step 5: Button to send emails
         if st.button("📬 Send Emails"):
-            if not (sender_email and app_password):
-                st.warning("⚠️ Please provide Gmail and App Password.")
+            if not (sender_email and app_password and smtp_host and smtp_port):
+                st.warning("⚠️ Please provide all SMTP and login details.")
             else:
                 success_count = 0
                 failed_count = 0
@@ -57,14 +61,24 @@ if excel_file:
                     msg['To'] = recipient
                     msg['Subject'] = subject
 
+                    if cc_emails:
+                        msg['Cc'] = cc_emails
+                    if bcc_emails:
+                        bcc_list = [email.strip() for email in bcc_emails.split(',')]
+                    else:
+                        bcc_list = []
+
                     body_content = plain_body.format(name=name, email=recipient, password=password)
                     msg.attach(MIMEText(body_content, 'plain'))
 
+                    to_addrs = [recipient] + cc_emails.split(',') if cc_emails else [recipient]
+                    to_addrs += bcc_list
+
                     try:
-                        with smtplib.SMTP("smtp.gmail.com", 587) as server:
+                        with smtplib.SMTP(smtp_host, smtp_port) as server:
                             server.starttls()
                             server.login(sender_email, app_password)
-                            server.send_message(msg)
+                            server.sendmail(sender_email, to_addrs, msg.as_string())
 
                         st.success(f"✅ Email sent to {name} ({recipient})")
                         success_count += 1

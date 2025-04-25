@@ -15,6 +15,7 @@ st.title("📧 Bulk Email Sender")
 file = st.file_uploader("Upload Excel or CSV file", type=["xlsx", "csv"])
 df = None
 valid_file = False
+normalized_columns = {}
 
 if file:
     try:
@@ -23,8 +24,15 @@ if file:
         elif file.name.endswith(".xlsx"):
             df = pd.read_excel(file)
 
-        required_columns = {'Name', 'Email', 'Password'}
-        if required_columns.issubset(set(df.columns)):
+        # Normalize column names to lowercase for comparison
+        normalized_columns = {col.lower(): col for col in df.columns}
+        required_columns = {'name', 'email', 'password'}
+
+        if required_columns.issubset(normalized_columns):
+            # Rename columns for consistency
+            df.rename(columns={normalized_columns['name']: 'Name',
+                               normalized_columns['email']: 'Email',
+                               normalized_columns['password']: 'Password'}, inplace=True)
             valid_file = True
         else:
             st.error("❗ File must contain the following columns: Name, Email, Password")

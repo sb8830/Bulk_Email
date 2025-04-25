@@ -134,4 +134,5 @@ if excel_file:
                 log_df = pd.DataFrame(log_data, columns=["Name", "Email", "Status", "Timestamp"])
                 csv_buffer = BytesIO()
                 log_df.to_csv(csv_buffer, index=False)
-                st.download_button("📥_
+                st.download_button("📥 Download Log CSV", data=csv_buffer.getvalue(), file_name="email_log.csv", mime="text/csv")
+                st.warning("⚠️ Email open tracking is not supported directly. Use 3rd-party services or embed tracking pixels.")

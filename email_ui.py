@@ -23,24 +23,42 @@ cc_emails_input = st.text_area("CC Emails (separate with commas or paste multipl
 bcc_emails_input = st.text_area("BCC Emails (separate with commas or paste multiple lines)", height=100, placeholder="bcc1@example.com\nbcc2@example.com")
 subject = st.text_input("Email Subject", value="Welcome to Our Platform!")
 
-# Step 3.5: Rich HTML Editor for Email Body
-st.subheader("📄 Email Body with Formatting")
-html_body = st_quill(value="""
+# Step 4: Gmail-style Email Body Editor
+st.subheader("📄 Compose Email Body (Rich HTML Format)")
+st.markdown("""
+Customize your email below using the editor — just like Gmail:
+- Use **bold**, *italic*, <u>underline</u>, 🎨 text/background color  
+- Create 🔗 hyperlinks  
+- Use bullet points, numbered lists  
+- Add indentation (Tab / Shift+Tab)
+""", unsafe_allow_html=True)
+
+html_body = st_quill(
+    value="""
 <p><strong>Dear {name},</strong></p>
 
-<p>Welcome to our platform! Your account has been successfully created.</p>
+<p>🎉 Welcome to our platform! Your account has been successfully created. Below are your login credentials:</p>
 
 <ul>
   <li><strong>Username:</strong> {email}</li>
   <li><strong>Password:</strong> {password}</li>
 </ul>
 
-<p>Please log in and change your password at your earliest convenience.</p>
+<p>Please <a href="https://yourwebsite.com/login" target="_blank">click here to log in</a> and change your password at your earliest convenience.</p>
 
-<p><em>Regards,</em><br><strong>Team</strong></p>
-""", html=True, key="editor")
+<p style="background-color:#f4f4f4; padding:10px; border-left: 4px solid #2196F3;"><em>Pro Tip:</em> Bookmark your dashboard for easy access.</p>
 
-# Helper function to validate email address
+<p><em>Best regards,</em><br><strong>The Support Team</strong></p>
+""",
+    html=True,
+    key="rich_editor"
+)
+
+# Optional Preview
+with st.expander("🔍 Preview Final Email with Sample Data"):
+    st.markdown(html_body.format(name="John Doe", email="john@example.com", password="12345678"), unsafe_allow_html=True)
+
+# Email validator
 def is_valid_email(email):
     return re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
 
@@ -48,17 +66,16 @@ def is_valid_email(email):
 cc_emails = [email.strip() for line in cc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
 bcc_emails = [email.strip() for line in bcc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
 
-# Step 4: Validate and Show Excel Data
+# Step 5: Excel Upload & Send
 if excel_file:
     df = pd.read_excel(excel_file)
-    df["Send"] = True  # Add a Send column defaulting to True
+    df["Send"] = True
     st.subheader("📄 Preview and Modify Excel Data")
     edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)})
 
     if 'Email' not in edited_df.columns or 'Name' not in edited_df.columns:
         st.error("❗ The Excel file must contain at least 'Name' and 'Email' columns.")
     else:
-        # Step 5: Button to send emails
         if st.button("📬 Send Emails"):
             if not (sender_email and app_password):
                 st.warning("⚠️ Please provide your email and app password.")
@@ -88,7 +105,6 @@ if excel_file:
                         msg['Cc'] = ", ".join(cc_emails)
 
                     try:
-                        # Format HTML body with variables
                         formatted_html_body = html_body.format(name=name, email=recipient, password=password)
                         msg.attach(MIMEText(formatted_html_body, 'html'))
 
@@ -114,11 +130,8 @@ if excel_file:
 
                 st.info(f"✅ Total Success: {success_count}, ❌ Total Failed: {failed_count}")
 
-                # Log to downloadable CSV
+                # Log file
                 log_df = pd.DataFrame(log_data, columns=["Name", "Email", "Status", "Timestamp"])
                 csv_buffer = BytesIO()
                 log_df.to_csv(csv_buffer, index=False)
-                st.download_button("📥 Download Log CSV", data=csv_buffer.getvalue(), file_name="email_log.csv", mime="text/csv")
-
-                st.warning("⚠️ Note: Email open tracking is not supported directly. Consider 3rd-party tools or tracking pixels.")
-
+                st.download_button("📥_

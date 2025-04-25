@@ -8,57 +8,24 @@ from streamlit_quill import st_quill
 from io import BytesIO
 from datetime import datetime
 
-st.set_page_config(page_title="Bulk Email Sender", layout="centered")
-st.title("📧 Bulk Email Sender")
+st.set_page_config(page_title="Bulk Email Sender", layout="wide")
+st.title("📧 Bulk Email Sender with Rich UI")
 
 # Step 1: Upload Excel file
 excel_file = st.file_uploader("Upload Excel file", type=["xlsx"])
 
 # Step 2: Input Gmail credentials
-sender_email = st.text_input("Your Email Address", placeholder="your@email.com")
-app_password = st.text_input("App Password", type="password")
+with st.expander("🔐 Email Credentials"):
+    sender_email = st.text_input("Your Gmail Address", placeholder="your@email.com")
+    app_password = st.text_input("Gmail App Password", type="password")
 
 # Step 3: Input CC, BCC, Subject
-cc_emails_input = st.text_area("CC Emails (separate with commas or paste multiple lines)", height=100, placeholder="cc1@example.com\ncc2@example.com")
-bcc_emails_input = st.text_area("BCC Emails (separate with commas or paste multiple lines)", height=100, placeholder="bcc1@example.com\nbcc2@example.com")
-subject = st.text_input("Email Subject", value="Welcome to Our Platform!")
+with st.expander("📬 Email Settings"):
+    cc_emails_input = st.text_area("CC Emails (comma/line-separated)", height=80)
+    bcc_emails_input = st.text_area("BCC Emails (comma/line-separated)", height=80)
+    subject = st.text_input("Email Subject", value="Welcome to Our Platform!")
 
-# Step 4: Gmail-style Email Body Editor
-st.subheader("📄 Compose Email Body (Rich HTML Format)")
-st.markdown("""
-Customize your email below using the editor — just like Gmail:
-- Use **bold**, *italic*, <u>underline</u>, 🎨 text/background color  
-- Create 🔗 hyperlinks  
-- Use bullet points, numbered lists  
-- Add indentation (Tab / Shift+Tab)
-""", unsafe_allow_html=True)
-
-html_body = st_quill(
-    value="""
-<p><strong>Dear {name},</strong></p>
-
-<p>🎉 Welcome to our platform! Your account has been successfully created. Below are your login credentials:</p>
-
-<ul>
-  <li><strong>Username:</strong> {email}</li>
-  <li><strong>Password:</strong> {password}</li>
-</ul>
-
-<p>Please <a href="https://yourwebsite.com/login" target="_blank">click here to log in</a> and change your password at your earliest convenience.</p>
-
-<p style="background-color:#f4f4f4; padding:10px; border-left: 4px solid #2196F3;"><em>Pro Tip:</em> Bookmark your dashboard for easy access.</p>
-
-<p><em>Best regards,</em><br><strong>The Support Team</strong></p>
-""",
-    html=True,
-    key="rich_editor"
-)
-
-# Optional Preview
-with st.expander("🔍 Preview Final Email with Sample Data"):
-    st.markdown(html_body.format(name="John Doe", email="john@example.com", password="12345678"), unsafe_allow_html=True)
-
-# Email validator
+# Helper function to validate email address
 def is_valid_email(email):
     return re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
 
@@ -66,7 +33,56 @@ def is_valid_email(email):
 cc_emails = [email.strip() for line in cc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
 bcc_emails = [email.strip() for line in bcc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
 
-# Step 5: Excel Upload & Send
+# Step 4: Email body with rich editor
+st.subheader("📄 Compose Email Body")
+st.markdown("""
+Use the editor below to write your message just like you would in Gmail:
+- ✍️ Use **bold**, *italic*, <u>underline</u>
+- 🎨 Text and background highlight (select → paint icon)
+- 🔗 Add hyperlinks
+- ✅ Bullet and numbered lists
+- 📐 Indent and align paragraphs
+""", unsafe_allow_html=True)
+
+html_body = st_quill(
+    value="""
+<p><strong>Dear {name},</strong></p>
+
+<p>We're excited to welcome you to our platform! 🎉</p>
+
+<ul>
+  <li><span style=\"background-color: #ffff00;\"><strong>Username:</strong></span> {email}</li>
+  <li><span style=\"background-color: #90ee90;\"><strong>Password:</strong></span> {password}</li>
+</ul>
+
+<p>Please <a href=\"https://yourwebsite.com/login\" target=\"_blank\">click here</a> to log in and change your password.</p>
+
+<p style=\"padding: 10px; border-left: 4px solid #2196F3; background-color: #f1f1f1;\">
+  <em>Tip:</em> Keep your login credentials safe and do not share them with others.
+</p>
+""",
+    html=True,
+    key="rich_email_body"
+)
+
+# Signature input
+st.subheader("✍️ Add Your Email Signature (Optional)")
+signature_input = st.text_area("Signature (HTML allowed)", height=150, value="""
+<p style=\"margin-top: 30px;\">
+  Best regards,<br>
+  <strong>Your Name</strong><br>
+  Customer Success Team<br>
+  <a href=\"https://yourwebsite.com\">yourwebsite.com</a>
+</p>
+""")
+
+# Preview
+with st.expander("🔍 Preview Final Email with Sample Data"):
+    preview_combined = html_body + signature_input
+    preview_filled = preview_combined.format(name="John Doe", email="john@example.com", password="12345678")
+    st.markdown(preview_filled, unsafe_allow_html=True)
+
+# Step 5: Load Excel and send emails
 if excel_file:
     df = pd.read_excel(excel_file)
     df["Send"] = True
@@ -81,8 +97,7 @@ if excel_file:
                 st.warning("⚠️ Please provide your email and app password.")
             else:
                 log_data = []
-                success_count = 0
-                failed_count = 0
+                success_count, failed_count = 0, 0
                 for index, row in edited_df.iterrows():
                     if not row.get("Send", True):
                         continue
@@ -96,7 +111,7 @@ if excel_file:
                         failed_count += 1
                         continue
 
-                    msg = MIMEMultipart()
+                    msg = MIMEMultipart("alternative")
                     msg['From'] = sender_email
                     msg['To'] = recipient
                     msg['Subject'] = subject
@@ -104,12 +119,13 @@ if excel_file:
                     if cc_emails:
                         msg['Cc'] = ", ".join(cc_emails)
 
+                    full_body = html_body + signature_input
+                    filled_body = full_body.format(name=name, email=recipient, password=password)
+                    msg.attach(MIMEText(filled_body, 'html'))
+
+                    to_addrs = [recipient] + cc_emails + bcc_emails
+
                     try:
-                        formatted_html_body = html_body.format(name=name, email=recipient, password=password)
-                        msg.attach(MIMEText(formatted_html_body, 'html'))
-
-                        to_addrs = [recipient] + cc_emails + bcc_emails
-
                         with smtplib.SMTP("smtp.gmail.com", 587) as server:
                             server.starttls()
                             server.login(sender_email, app_password)
@@ -120,19 +136,17 @@ if excel_file:
                             success_count += 1
                             log_data.append([name, recipient, "Success", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
                         else:
-                            st.error(f"❌ Failed to send email to {name} ({recipient}): SMTP did not accept recipient")
+                            st.error(f"❌ SMTP error for {name} ({recipient})")
                             failed_count += 1
                             log_data.append([name, recipient, "SMTP Rejected", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
                     except Exception as e:
-                        st.error(f"❌ Failed to send email to {name} ({recipient}): {e}")
+                        st.error(f"❌ Failed for {name} ({recipient}): {e}")
                         failed_count += 1
                         log_data.append([name, recipient, f"Exception: {e}", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
 
-                st.info(f"✅ Total Success: {success_count}, ❌ Total Failed: {failed_count}")
+                st.info(f"✅ Sent: {success_count}, ❌ Failed: {failed_count}")
 
-                # Log file
                 log_df = pd.DataFrame(log_data, columns=["Name", "Email", "Status", "Timestamp"])
                 csv_buffer = BytesIO()
                 log_df.to_csv(csv_buffer, index=False)
                 st.download_button("📥 Download Log CSV", data=csv_buffer.getvalue(), file_name="email_log.csv", mime="text/csv")
-                st.warning("⚠️ Email open tracking is not supported directly. Use 3rd-party services or embed tracking pixels.")

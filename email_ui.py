@@ -10,7 +10,7 @@ from datetime import datetime
 
 # Set Streamlit page config
 st.set_page_config(page_title="Bulk Email Sender", layout="wide")
-st.title("📧 Bulk Email Sender with Rich UI")
+st.title("📧 Bulk Email Sender with Invesmate")
 
 # Step 1: Upload Excel file
 excel_file = st.file_uploader("Upload Excel file", type=["xlsx"])

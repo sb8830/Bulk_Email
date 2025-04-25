@@ -9,7 +9,7 @@ from io import BytesIO
 from datetime import datetime
 
 st.set_page_config(page_title="Bulk Email Sender", layout="wide")
-st.title("📧 Bulk Email Sender For Invesmate")
+st.title("📧 Bulk Email Sender")
 
 # Step 1: Upload Excel file
 excel_file = st.file_uploader("Upload Excel file", type=["xlsx"])
@@ -34,7 +34,7 @@ cc_emails = [email.strip() for line in cc_emails_input.splitlines() for email in
 bcc_emails = [email.strip() for line in bcc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
 
 # Email body and signature editor
-st.subheader("📄 Compose Email Body")
+st.subheader("📄 Email Body")
 html_body = st_quill(
     value="""
 <p><strong>Dear {name},</strong></p>

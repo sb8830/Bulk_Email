@@ -66,22 +66,44 @@ st.subheader("📄 Email Body")
 html_body = st_quill(
     value="""
 <p><strong>Dear {name},</strong></p>
-<p>We're excited to welcome you to our platform! 🎉</p>
+<p style=\"text-align: justify;\">We are excited to announce that we have created new company email accounts for all employees using Microsoft Outlook! This upgrade is part of our ongoing effort to improve communication and collaboration within the company.</p>
+<p><strong>Your New Email Address:</strong> <span style='background-color: #FFFF00'>{email}</span><br>
+<strong>Temporary Password:</strong> <span style='background-color: #90EE90'>{password}</span></p>
+<p><strong>Important Email Account Transition Information:</strong></p>
 <ul>
-  <li><span style=\"background-color: #ffff00;\"><strong>Username:</strong></span> {email}</li>
-  <li><span style=\"background-color: #90ee90;\"><strong>Password:</strong></span> {password}</li>
+  <li><strong>Google Drive Data and Emails:</strong> All emails and files from existing company domain (*@invesmate.com) user accounts have already been migrated to the new Outlook accounts.</li>
+  <li><strong>Google Workspace Account Deactivation:</strong> Your existing *@invesmate.com Gmail accounts will be deactivated on <strong>April 25, 2025 at 11PM</strong>.</li>
+  <li><strong>Individual Gmail Account Deactivation:</strong> If you are using an individual Gmail account (*.invesmate@gmail.com), please move important files to your company OneDrive. These accounts will be disabled for company use within one week.</li>
 </ul>
-<p>Please <a href=\"https://yourwebsite.com/login\" target=\"_blank\">click here</a> to log in and change your password.</p>
-<p style=\"padding: 10px; border-left: 4px solid #2196F3; background-color: #f1f1f1;\">
-  <em>Tip:</em> Keep your login credentials safe and do not share them with others.
+<p><strong>Accessing Your Accounts:</strong></p>
+<ul>
+  <li><a href='https://play.google.com/store/apps/details?id=com.azure.authenticator'>Microsoft Authenticator</a></li>
+  <li><a href='https://outlook.office.com/mail/'>Outlook Web App</a></li>
+  <li><a href='https://teams.microsoft.com/v2/'>Microsoft Teams</a></li>
+  <li><a href='https://admininvesmate360-my.sharepoint.com/'>OneDrive</a></li>
+  <li><a href='https://m365.cloud.microsoft/launch/excel'>Excel</a></li>
+  <li><a href='https://m365.cloud.microsoft/launch/word'>Docs</a></li>
+</ul>
+<p><strong>How to Login to Outlook:</strong></p>
+<ol>
+  <li>Go to the Outlook Web App link provided above.</li>
+  <li>Enter your new email address.</li>
+  <li>Enter the temporary password provided above.</li>
+  <li>Create a new secure password.<br>Minimum 8 characters. Use uppercase, lowercase, numbers, and symbols.</li>
+</ol>
+<p><strong>Helpful Resources:</strong></p>
+<ul>
+  <li><a href='https://youtu.be/HCxNXgg4GKE'>Outlook Setup Video</a></li>
+  <li><a href='https://youtu.be/faDI4svhtTY'>Microsoft Apps Demo</a></li>
+</ul>
+<p>If you have any questions or need assistance, please do not hesitate to contact us.</p>
+<p style='margin-top: 30px;'>
+Regards,<br>
+<strong>Your Name</strong><br>
+IT Support Team<br>
+<a href='https://invesmate.com'>invesmate.com</a>
 </p>
-<p style=\"margin-top: 30px;\">
-  Best regards,<br>
-  <strong>Your Name</strong><br>
-  Customer Success Team<br>
-  <a href=\"https://yourwebsite.com\">yourwebsite.com</a>
-</p>
-<img src=\"https://yourserver.com/track_open.png?email={email}\" width=\"1\" height=\"1\" style=\"display:none\">  <!-- Tracking Pixel -->
+<img src='https://yourserver.com/track_open.png?email={email}' width='1' height='1' style='display:none'>
 """,
     html=True,
     key="rich_email_body"

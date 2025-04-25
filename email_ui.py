@@ -7,6 +7,7 @@ import streamlit as st
 from streamlit_quill import st_quill
 from io import BytesIO
 from datetime import datetime
+import dns.resolver
 
 st.set_page_config(page_title="Bulk Email Sender", layout="wide")
 st.title("📧 Bulk Email Sender")
@@ -53,9 +54,18 @@ with st.expander("📬 Email Settings"):
     bcc_emails_input = st.text_area("BCC Emails (comma/line-separated)", height=80)
     subject = st.text_input("Email Subject", value="Welcome to Our Platform!")
 
-# Helper function to validate email address
+# Helper function to validate email address format
 def is_valid_email(email):
     return re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
+
+# Optional: MX record validation (basic email existence check)
+def email_exists(email):
+    domain = email.split('@')[-1]
+    try:
+        answers = dns.resolver.resolve(domain, 'MX')
+        return len(answers) > 0
+    except:
+        return False
 
 # Process CC and BCC inputs
 cc_emails = [email.strip() for line in cc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
@@ -89,7 +99,7 @@ html_body = st_quill(
   <li>Go to the Outlook Web App link provided above.</li>
   <li>Enter your new email address.</li>
   <li>Enter the temporary password provided above.</li>
-  <li>Create a new secure password. <br><li>Minimum 8 characters. Use uppercase, lowercase, numbers, and symbols.</li></li>
+  <li>Create a new secure password.<br>Minimum 8 characters. Use uppercase, lowercase, numbers, and symbols.</li>
 </ol>
 <p><strong>Helpful Resources:</strong></p>
 <ul>
@@ -100,8 +110,8 @@ html_body = st_quill(
 <p style='margin-top: 30px;'>
 Regards,<br>
 <strong>Your Name</strong><br>
-Admin Support Team<br>
-<a href='https://invesmate.com'>www.invesmate.com</a>
+IT Support Team<br>
+<a href='https://invesmate.com'>invesmate.com</a>
 </p>
 <img src='https://yourserver.com/track_open.png?email={email}' width='1' height='1' style='display:none'>
 """,
@@ -135,8 +145,8 @@ if valid_file:
                 name = row.get('Name', 'Customer')
                 password = row.get('Password', 'Not Provided')
 
-                if not is_valid_email(recipient):
-                    st.error(f"❌ Invalid email format for {name} ({recipient}), skipping.")
+                if not is_valid_email(recipient) or not email_exists(recipient):
+                    st.error(f"❌ Invalid or non-existent email for {name} ({recipient}), skipping.")
                     failed_count += 1
                     continue
 

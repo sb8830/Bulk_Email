@@ -4,6 +4,7 @@ import re
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import streamlit as st
+from streamlit_quill import st_quill
 from io import BytesIO
 from datetime import datetime
 
@@ -17,23 +18,27 @@ excel_file = st.file_uploader("Upload Excel file", type=["xlsx"])
 sender_email = st.text_input("Your Email Address", placeholder="your@email.com")
 app_password = st.text_input("App Password", type="password")
 
-# Step 3: Input CC, BCC, Subject, and Message
+# Step 3: Input CC, BCC, Subject
 cc_emails_input = st.text_area("CC Emails (separate with commas or paste multiple lines)", height=100, placeholder="cc1@example.com\ncc2@example.com")
 bcc_emails_input = st.text_area("BCC Emails (separate with commas or paste multiple lines)", height=100, placeholder="bcc1@example.com\nbcc2@example.com")
 subject = st.text_input("Email Subject", value="Welcome to Our Platform!")
-plain_body = st.text_area("Email Body (Plain Text with Placeholders)", height=250, value="""
-Dear {name},
 
-Welcome to our platform! Your account has been successfully created.
+# Step 3.5: Rich HTML Editor for Email Body
+st.subheader("📄 Email Body with Formatting")
+html_body = st_quill(value="""
+<p><strong>Dear {name},</strong></p>
 
-Username: {email}
-Password: {password}
+<p>Welcome to our platform! Your account has been successfully created.</p>
 
-Please log in and change your password at your earliest convenience.
+<ul>
+  <li><strong>Username:</strong> {email}</li>
+  <li><strong>Password:</strong> {password}</li>
+</ul>
 
-Regards,
-Team
-""")
+<p>Please log in and change your password at your earliest convenience.</p>
+
+<p><em>Regards,</em><br><strong>Team</strong></p>
+""", html=True, key="editor")
 
 # Helper function to validate email address
 def is_valid_email(email):
@@ -82,12 +87,13 @@ if excel_file:
                     if cc_emails:
                         msg['Cc'] = ", ".join(cc_emails)
 
-                    body_content = plain_body.format(name=name, email=recipient, password=password)
-                    msg.attach(MIMEText(body_content, 'plain'))
-
-                    to_addrs = [recipient] + cc_emails + bcc_emails
-
                     try:
+                        # Format HTML body with variables
+                        formatted_html_body = html_body.format(name=name, email=recipient, password=password)
+                        msg.attach(MIMEText(formatted_html_body, 'html'))
+
+                        to_addrs = [recipient] + cc_emails + bcc_emails
+
                         with smtplib.SMTP("smtp.gmail.com", 587) as server:
                             server.starttls()
                             server.login(sender_email, app_password)
@@ -114,4 +120,5 @@ if excel_file:
                 log_df.to_csv(csv_buffer, index=False)
                 st.download_button("📥 Download Log CSV", data=csv_buffer.getvalue(), file_name="email_log.csv", mime="text/csv")
 
-                st.warning("⚠️ Note: To track whether an email is opened, you'll need to integrate with a 3rd-party service that provides open tracking or embed a tracking pixel. Gmail and most email clients block read receipts by default for privacy reasons.")
+                st.warning("⚠️ Note: Email open tracking is not supported directly. Consider 3rd-party tools or tracking pixels.")
+

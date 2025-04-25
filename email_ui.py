@@ -8,8 +8,9 @@ from streamlit_quill import st_quill
 from io import BytesIO
 from datetime import datetime
 
+# Set Streamlit page config
 st.set_page_config(page_title="Bulk Email Sender", layout="wide")
-st.title("📧 Bulk Email Sender")
+st.title("📧 Bulk Email Sender with Rich UI")
 
 # Step 1: Upload Excel file
 excel_file = st.file_uploader("Upload Excel file", type=["xlsx"])
@@ -33,8 +34,8 @@ def is_valid_email(email):
 cc_emails = [email.strip() for line in cc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
 bcc_emails = [email.strip() for line in bcc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
 
-# Email body and signature editor
-st.subheader("📄 Email Body")
+# Email body and signature editor using Quill editor
+st.subheader("📄 Compose Email Body")
 html_body = st_quill(
     value="""
 <p><strong>Dear {name},</strong></p>
@@ -42,21 +43,21 @@ html_body = st_quill(
 <p>We're excited to welcome you to our platform! 🎉</p>
 
 <ul>
-  <li><span style=\"background-color: #ffff00;\"><strong>Username:</strong></span> {email}</li>
-  <li><span style=\"background-color: #90ee90;\"><strong>Password:</strong></span> {password}</li>
+  <li><span style="background-color: #ffff00;"><strong>Username:</strong></span> {email}</li>
+  <li><span style="background-color: #90ee90;"><strong>Password:</strong></span> {password}</li>
 </ul>
 
-<p>Please <a href=\"https://yourwebsite.com/login\" target=\"_blank\">click here</a> to log in and change your password.</p>
+<p>Please <a href="https://yourwebsite.com/login" target="_blank">click here</a> to log in and change your password.</p>
 
-<p style=\"padding: 10px; border-left: 4px solid #2196F3; background-color: #f1f1f1;\">
+<p style="padding: 10px; border-left: 4px solid #2196F3; background-color: #f1f1f1;">
   <em>Tip:</em> Keep your login credentials safe and do not share them with others.
 </p>
 
-<p style=\"margin-top: 30px;\">
+<p style="margin-top: 30px;">
   Best regards,<br>
   <strong>Your Name</strong><br>
   Customer Success Team<br>
-  <a href=\"https://yourwebsite.com\">yourwebsite.com</a>
+  <a href="https://yourwebsite.com">yourwebsite.com</a>
 </p>
 """,
     html=True,

@@ -33,17 +33,8 @@ def is_valid_email(email):
 cc_emails = [email.strip() for line in cc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
 bcc_emails = [email.strip() for line in bcc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
 
-# Step 4: Email body with rich editor
+# Email body and signature editor
 st.subheader("📄 Compose Email Body")
-st.markdown("""
-Use the editor below to write your message just like you would in Gmail:
-- ✍️ Use **bold**, *italic*, <u>underline</u>
-- 🎨 Text and background highlight (select → paint icon)
-- 🔗 Add hyperlinks
-- ✅ Bullet and numbered lists
-- 📐 Indent and align paragraphs
-""", unsafe_allow_html=True)
-
 html_body = st_quill(
     value="""
 <p><strong>Dear {name},</strong></p>
@@ -60,26 +51,21 @@ html_body = st_quill(
 <p style=\"padding: 10px; border-left: 4px solid #2196F3; background-color: #f1f1f1;\">
   <em>Tip:</em> Keep your login credentials safe and do not share them with others.
 </p>
-""",
-    html=True,
-    key="rich_email_body"
-)
 
-# Signature input
-st.subheader("✍️ Add Your Email Signature (Optional)")
-signature_input = st.text_area("Signature (HTML allowed)", height=150, value="""
 <p style=\"margin-top: 30px;\">
   Best regards,<br>
   <strong>Your Name</strong><br>
   Customer Success Team<br>
   <a href=\"https://yourwebsite.com\">yourwebsite.com</a>
 </p>
-""")
+""",
+    html=True,
+    key="rich_email_body"
+)
 
 # Preview
 with st.expander("🔍 Preview Final Email with Sample Data"):
-    preview_combined = html_body + signature_input
-    preview_filled = preview_combined.format(name="John Doe", email="john@example.com", password="12345678")
+    preview_filled = html_body.format(name="John Doe", email="john@example.com", password="12345678")
     st.markdown(preview_filled, unsafe_allow_html=True)
 
 # Step 5: Load Excel and send emails
@@ -119,8 +105,7 @@ if excel_file:
                     if cc_emails:
                         msg['Cc'] = ", ".join(cc_emails)
 
-                    full_body = html_body + signature_input
-                    filled_body = full_body.format(name=name, email=recipient, password=password)
+                    filled_body = html_body.format(name=name, email=recipient, password=password)
                     msg.attach(MIMEText(filled_body, 'html'))
 
                     to_addrs = [recipient] + cc_emails + bcc_emails

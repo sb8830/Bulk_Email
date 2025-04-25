@@ -89,7 +89,7 @@ html_body = st_quill(
   <li>Go to the Outlook Web App link provided above.</li>
   <li>Enter your new email address.</li>
   <li>Enter the temporary password provided above.</li>
-  <li>Create a new secure password.<br>Minimum 8 characters. Use uppercase, lowercase, numbers, and symbols.</li>
+  <li>Create a new secure password. <br><li>Minimum 8 characters. Use uppercase, lowercase, numbers, and symbols.</li></li>
 </ol>
 <p><strong>Helpful Resources:</strong></p>
 <ul>
@@ -100,8 +100,8 @@ html_body = st_quill(
 <p style='margin-top: 30px;'>
 Regards,<br>
 <strong>Your Name</strong><br>
-IT Support Team<br>
-<a href='https://invesmate.com'>invesmate.com</a>
+Admin Support Team<br>
+<a href='https://invesmate.com'>www.invesmate.com</a>
 </p>
 <img src='https://yourserver.com/track_open.png?email={email}' width='1' height='1' style='display:none'>
 """,

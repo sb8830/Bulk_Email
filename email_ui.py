@@ -8,12 +8,21 @@ from streamlit_quill import st_quill
 from io import BytesIO
 from datetime import datetime
 
-# Set Streamlit page config
 st.set_page_config(page_title="Bulk Email Sender", layout="wide")
-st.title("📧 Bulk Email Sender with Invesmate")
+st.title("📧 Bulk Email Sender")
 
-# Step 1: Upload Excel file
-excel_file = st.file_uploader("Upload Excel file", type=["xlsx"])
+# Step 1: Upload Excel or CSV file
+file = st.file_uploader("Upload Excel or CSV file", type=["xlsx", "csv"])
+df = None
+if file:
+    try:
+        if file.name.endswith(".csv"):
+            df = pd.read_csv(file)
+        elif file.name.endswith(".xlsx"):
+            df = pd.read_excel(file)
+    except Exception as e:
+        st.error(f"❌ Failed to read file: {e}")
+        df = None
 
 # Step 2: Input Gmail credentials
 with st.expander("🔐 Email Credentials"):
@@ -34,8 +43,8 @@ def is_valid_email(email):
 cc_emails = [email.strip() for line in cc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
 bcc_emails = [email.strip() for line in bcc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
 
-# Email body and signature editor using Quill editor
-st.subheader("📄 Compose Email Body")
+# Email body and signature editor
+st.subheader("📄 Email Body")
 html_body = st_quill(
     value="""
 <p><strong>Dear {name},</strong></p>
@@ -43,22 +52,24 @@ html_body = st_quill(
 <p>We're excited to welcome you to our platform! 🎉</p>
 
 <ul>
-  <li><span style="background-color: #ffff00;"><strong>Username:</strong></span> {email}</li>
-  <li><span style="background-color: #90ee90;"><strong>Password:</strong></span> {password}</li>
+  <li><span style=\"background-color: #ffff00;\"><strong>Username:</strong></span> {email}</li>
+  <li><span style=\"background-color: #90ee90;\"><strong>Password:</strong></span> {password}</li>
 </ul>
 
-<p>Please <a href="https://yourwebsite.com/login" target="_blank">click here</a> to log in and change your password.</p>
+<p>Please <a href=\"https://yourwebsite.com/login\" target=\"_blank\">click here</a> to log in and change your password.</p>
 
-<p style="padding: 10px; border-left: 4px solid #2196F3; background-color: #f1f1f1;">
+<p style=\"padding: 10px; border-left: 4px solid #2196F3; background-color: #f1f1f1;\">
   <em>Tip:</em> Keep your login credentials safe and do not share them with others.
 </p>
 
-<p style="margin-top: 30px;">
+<p style=\"margin-top: 30px;\">
   Best regards,<br>
   <strong>Your Name</strong><br>
   Customer Success Team<br>
-  <a href="https://yourwebsite.com">yourwebsite.com</a>
+  <a href=\"https://yourwebsite.com\">yourwebsite.com</a>
 </p>
+
+<img src=\"https://yourserver.com/track_open.png?email={email}\" width=\"1\" height=\"1\" style=\"display:none\">  <!-- Tracking Pixel -->
 """,
     html=True,
     key="rich_email_body"
@@ -66,19 +77,19 @@ html_body = st_quill(
 
 # Preview
 with st.expander("🔍 Preview Final Email with Sample Data"):
-    preview_filled = html_body.format(name="John Doe", email="john@example.com", password="12345678")
-    st.markdown(preview_filled, unsafe_allow_html=True)
+    if df is not None:
+        preview_filled = html_body.format(name="John Doe", email="john@example.com", password="12345678")
+        st.markdown(preview_filled, unsafe_allow_html=True)
 
-# Step 5: Load Excel and send emails
-if excel_file:
-    df = pd.read_excel(excel_file)
+# Step 5: Load Excel/CSV and send emails
+if df is not None:
     df["Send"] = True
-    st.subheader("📄 Preview and Modify Excel Data")
-    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)})
-
-    if 'Email' not in edited_df.columns or 'Name' not in edited_df.columns:
-        st.error("❗ The Excel file must contain at least 'Name' and 'Email' columns.")
+    if 'Email' not in df.columns or 'Name' not in df.columns:
+        st.error("❗ The file must contain at least 'Name' and 'Email' columns.")
     else:
+        st.subheader("📄 Preview and Modify Data")
+        edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)})
+
         if st.button("📬 Send Emails"):
             if not (sender_email and app_password):
                 st.warning("⚠️ Please provide your email and app password.")

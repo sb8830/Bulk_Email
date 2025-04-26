@@ -25,7 +25,6 @@ if file:
         elif file.name.endswith(".xlsx"):
             df = pd.read_excel(file)
 
-        # Normalize column names to lowercase for comparison
         df.columns = [col.lower().strip() for col in df.columns]
 
         required_columns = {'name', 'sender email', 'email id', 'password'}
@@ -57,14 +56,13 @@ with st.expander("📬 Email Settings"):
     subject = st.text_input("Email Subject", value="Welcome to Our Platform!")
     delay = st.slider("⏱ Delay between emails (seconds)", min_value=0, max_value=60, value=1)
 
-# Helper function to validate email address format
+# Helper functions
 def is_valid_email(email):
-    return re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
+    return re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", str(email))
 
-# Optional: MX record validation (basic email existence check)
 def email_exists(email):
-    domain = email.split('@')[-1]
     try:
+        domain = email.split('@')[-1]
         answers = dns.resolver.resolve(domain, 'MX')
         return len(answers) > 0
     except:
@@ -87,22 +85,23 @@ html_body = st_quill(
   <li><a href='https://outlook.office.com/mail/'>Outlook Web App</a></li>
   <li><a href='https://m365.cloud.microsoft/launch/word'>Docs</a></li>
 </ul>
-<p>Regards,<br><strong>Your Name</strong></p>
+<p>If you have any questions or need assistance, please do not hesitate to contact us.</p>
+<p>Thanks & Regards,<br><strong>Swatata Banerjee</strong><br>Admin Support Team<br><a href='https://www.invesmate.com'>www.invesmate.com</a></p>
 <img src='https://yourserver.com/track_open.png?email={email}' width='1' height='1' style='display:none'>
 """,
     html=True,
     key="rich_email_body"
 )
 
-# Preview
+# Preview section
 with st.expander("🔍 Preview Final Email with Sample Data"):
     if valid_file:
         preview_filled = html_body.format(name="John Doe", email="john@example.com", id="john@example.com", password="12345678")
         st.markdown(preview_filled, unsafe_allow_html=True)
 
-# Step 5: Load Excel/CSV and send emails
+# Step 5: Display editable data grid and send emails
 if valid_file:
-    df["Send"] = True
+    df["Send"] = df.apply(lambda row: all(pd.notna([row['Name'], row['Email'], row['ID'], row['Password']])) and is_valid_email(row['Email']), axis=1)
     st.subheader("📄 Preview and Modify Data")
     edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)})
 

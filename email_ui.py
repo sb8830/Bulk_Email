@@ -64,13 +64,10 @@ with st.expander("✉️ CC / BCC / Subject Settings"):
 def is_valid_email(email):
     return bool(re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", str(email)))
 
-def email_exists(email):
-    try:
-        domain = email.split('@')[-1]
-        dns.resolver.resolve(domain, 'MX')
-        return True
-    except:
-        return False
+def highlight_invalid_rows(row):
+    if not is_valid_email(row['Email']) or not is_valid_email(row['ID']) or pd.isna(row['Password']) or row['Password'] == '':
+        return ['background-color: #FFD6D6'] * len(row)
+    return [''] * len(row)
 
 # Process CC, BCC
 cc_emails = [e.strip() for l in cc_emails_input.splitlines() for e in l.split(',') if is_valid_email(e.strip())]
@@ -93,13 +90,6 @@ html_body = st_quill(
 )
 
 # Step 5: Preview & Edit
-def highlight_invalid(val, col_name):
-    if col_name in ['Email', 'ID'] and not is_valid_email(val):
-        return 'background-color: #FFD6D6'
-    if pd.isna(val) or val == '':
-        return 'background-color: #FFD6D6'
-    return ''
-
 if st.session_state.data is not None:
     st.header("5️⃣ Review, Edit, and Send")
     edited_df = st.data_editor(
@@ -109,9 +99,8 @@ if st.session_state.data is not None:
         column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)}
     )
 
-    styled = edited_df.style.applymap(lambda v: highlight_invalid(v, 'Email'), subset=['Email'])\
-                               .applymap(lambda v: highlight_invalid(v, 'ID'), subset=['ID'])
-    st.dataframe(styled, use_container_width=True)
+    styled_df = edited_df.style.apply(highlight_invalid_rows, axis=1)
+    st.dataframe(styled_df, use_container_width=True)
 
     st.session_state.data = edited_df.copy()
 
@@ -119,9 +108,12 @@ if st.session_state.data is not None:
         if not (sender_email and app_password):
             st.warning("⚠️ Please provide Gmail address and app password.")
         else:
+            progress = st.progress(0)
             log_data = []
             success, failure = 0, 0
-            for index, row in st.session_state.data.iterrows():
+            total = len(st.session_state.data[st.session_state.data['Send'] == True])
+
+            for i, (index, row) in enumerate(st.session_state.data.iterrows()):
                 if not row.get("Send", True):
                     continue
 
@@ -130,8 +122,8 @@ if st.session_state.data is not None:
                 user_id = row['ID']
                 pwd = row['Password']
 
-                if not (is_valid_email(recipient) and is_valid_email(user_id)):
-                    st.error(f"❌ Skipping {name}: Invalid Email/ID format.")
+                if not (is_valid_email(recipient) and is_valid_email(user_id) and pwd):
+                    st.error(f"❌ Skipping {name}: Invalid Email/ID/Password.")
                     failure += 1
                     continue
 
@@ -163,6 +155,7 @@ if st.session_state.data is not None:
                     log_data.append([name, recipient, f"Failed: {str(e)}", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
 
                 time.sleep(delay)
+                progress.progress((i + 1) / total)
 
             st.info(f"📢 Summary: {success} Sent | {failure} Failed")
 

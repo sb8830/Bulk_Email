@@ -27,16 +27,19 @@ if file:
 
         # Normalize column names to lowercase for comparison
         normalized_columns = {col.lower(): col for col in df.columns}
-        required_columns = {'name', 'email', 'password'}
+        required_columns = {'name', 'email', 'password', 'id'}
 
         if required_columns.issubset(normalized_columns):
             # Rename columns for consistency
-            df.rename(columns={normalized_columns['name']: 'Name',
-                               normalized_columns['email']: 'Email',
-                               normalized_columns['password']: 'Password'}, inplace=True)
+            df.rename(columns={
+                normalized_columns['name']: 'Name',
+                normalized_columns['email']: 'Email',
+                normalized_columns['password']: 'Password',
+                normalized_columns['id']: 'ID'
+            }, inplace=True)
             valid_file = True
         else:
-            st.error("❗ File must contain the following columns: Name, Email, Password")
+            st.error("❗ File must contain the following columns: Name, Email, Password, ID")
             df = None
 
     except Exception as e:
@@ -76,43 +79,15 @@ st.subheader("📄 Email Body")
 html_body = st_quill(
     value="""
 <p><strong>Dear {name},</strong></p>
-<p style=\"text-align: justify;\">We are excited to announce that we have created new company email accounts for all employees using Microsoft Outlook! This upgrade is part of our ongoing effort to improve communication and collaboration within the company.</p>
-<p><strong>Your New Email Address:</strong> <span style='background-color: #FFFF00'>{email}</span><br>
+<p>We are excited to announce that we have created new company email accounts for all employees using Microsoft Outlook!</p>
+<p><strong>Your New Email Address:</strong> <span style='background-color: #FFFF00'>{id}</span><br>
 <strong>Temporary Password:</strong> <span style='background-color: #90EE90'>{password}</span></p>
-<p><strong>Important Email Account Transition Information:</strong></p>
+<p><strong>Access Links:</strong></p>
 <ul>
-  <li><strong>Google Drive Data and Emails:</strong> All emails and files from existing company domain (*@invesmate.com) user accounts have already been migrated to the new Outlook accounts.</li>
-  <li><strong>Google Workspace Account Deactivation:</strong> Your existing *@invesmate.com Gmail accounts will be deactivated on <strong>April 25, 2025 at 11PM</strong>.</li>
-  <li><strong>Individual Gmail Account Deactivation:</strong> If you are using an individual Gmail account (*.invesmate@gmail.com), please move important files to your company OneDrive. These accounts will be disabled for company use within one week.</li>
-</ul>
-<p><strong>Accessing Your Accounts:</strong></p>
-<ul>
-  <li><a href='https://play.google.com/store/apps/details?id=com.azure.authenticator'>Microsoft Authenticator</a></li>
   <li><a href='https://outlook.office.com/mail/'>Outlook Web App</a></li>
-  <li><a href='https://teams.microsoft.com/v2/'>Microsoft Teams</a></li>
-  <li><a href='https://admininvesmate360-my.sharepoint.com/'>OneDrive</a></li>
-  <li><a href='https://m365.cloud.microsoft/launch/excel'>Excel</a></li>
   <li><a href='https://m365.cloud.microsoft/launch/word'>Docs</a></li>
 </ul>
-<p><strong>How to Login to Outlook:</strong></p>
-<ol>
-  <li>Go to the Outlook Web App link provided above.</li>
-  <li>Enter your new email address.</li>
-  <li>Enter the temporary password provided above.</li>
-  <li>Create a new secure password.<br>Minimum 8 characters. Use uppercase, lowercase, numbers, and symbols.</li>
-</ol>
-<p><strong>Helpful Resources:</strong></p>
-<ul>
-  <li><a href='https://youtu.be/HCxNXgg4GKE'>Outlook Setup Video</a></li>
-  <li><a href='https://youtu.be/faDI4svhtTY'>Microsoft Apps Demo</a></li>
-</ul>
-<p>If you have any questions or need assistance, please do not hesitate to contact us.</p>
-<p style='margin-top: 30px;'>
-Regards,<br>
-<strong>Your Name</strong><br>
-IT Support Team<br>
-<a href='https://invesmate.com'>invesmate.com</a>
-</p>
+<p>Regards,<br><strong>Your Name</strong></p>
 <img src='https://yourserver.com/track_open.png?email={email}' width='1' height='1' style='display:none'>
 """,
     html=True,
@@ -122,7 +97,7 @@ IT Support Team<br>
 # Preview
 with st.expander("🔍 Preview Final Email with Sample Data"):
     if valid_file:
-        preview_filled = html_body.format(name="John Doe", email="john@example.com", password="12345678")
+        preview_filled = html_body.format(name="John Doe", email="john@example.com", id="john@example.com", password="12345678")
         st.markdown(preview_filled, unsafe_allow_html=True)
 
 # Step 5: Load Excel/CSV and send emails
@@ -144,6 +119,7 @@ if valid_file:
                 recipient = row['Email']
                 name = row.get('Name', 'Customer')
                 password = row.get('Password', 'Not Provided')
+                user_id = row.get('ID', 'NA')
 
                 if not is_valid_email(recipient) or not email_exists(recipient):
                     st.error(f"❌ Invalid or non-existent email for {name} ({recipient}), skipping.")
@@ -158,7 +134,7 @@ if valid_file:
                 if cc_emails:
                     msg['Cc'] = ", ".join(cc_emails)
 
-                filled_body = html_body.format(name=name, email=recipient, password=password)
+                filled_body = html_body.format(name=name, email=recipient, id=user_id, password=password)
                 msg.attach(MIMEText(filled_body, 'html'))
 
                 to_addrs = [recipient] + cc_emails + bcc_emails

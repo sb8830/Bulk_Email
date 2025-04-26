@@ -16,7 +16,6 @@ st.title("📧 Bulk Email Sender")
 file = st.file_uploader("Upload Excel or CSV file", type=["xlsx", "csv"])
 df = None
 valid_file = False
-normalized_columns = {}
 
 if file:
     try:
@@ -27,23 +26,14 @@ if file:
 
         # Normalize column names to lowercase for comparison
         df.columns = [col.lower().strip() for col in df.columns]
-        column_mapping = {
-            'name': None,
-            'sender email': None,
-            'email id': None,
-            'password': None
-        }
 
-        for col in df.columns:
-            if col in column_mapping:
-                column_mapping[col] = col
-
-        if all(column_mapping.values()):
+        required_columns = {'name', 'sender email', 'email id', 'password'}
+        if required_columns.issubset(set(df.columns)):
             df.rename(columns={
-                column_mapping['name']: 'Name',
-                column_mapping['sender email']: 'Email',
-                column_mapping['email id']: 'ID',
-                column_mapping['password']: 'Password'
+                'name': 'Name',
+                'sender email': 'Email',
+                'email id': 'ID',
+                'password': 'Password'
             }, inplace=True)
             valid_file = True
         else:

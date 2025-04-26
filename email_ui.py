@@ -111,21 +111,14 @@ if valid_file:
             return ['background-color: yellow'] * len(row)  # Highlight the row in yellow
         return [''] * len(row)  # No highlight if valid
 
-    # Display table with "Send" checkboxes for each row
+    # Apply row highlighting for invalid rows
+    df_styled = df.style.apply(highlight_invalid_rows, axis=1)
+
+    # Display the data as a table with the 'Send' checkbox and validation highlights
     st.subheader("📄 Preview and Modify Data")
-    for i, row in df.iterrows():
-        # Create checkbox for each row dynamically
-        send_checkbox = st.checkbox(f"Send Email to {row['Name']} ({row['Email']})", value=row['Send'], key=i)
+    edited_df = st.dataframe(df_styled)
 
-        # If invalid data is found, highlight the row in yellow
-        if not is_valid_email(row['ID']) or not row['Password']:
-            st.markdown(f"<div style='background-color: yellow;'>{row.to_frame().T.to_html(index=False)}</div>", unsafe_allow_html=True)
-        else:
-            st.write(row)
-
-        # Save checkbox selection
-        df.at[i, 'Send'] = send_checkbox
-
+    # Button to send emails
     if st.button("📬 Send Emails"):
         if not (sender_email and app_password):
             st.warning("⚠️ Please provide your email and app password.")

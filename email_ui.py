@@ -176,3 +176,10 @@ if valid_file:
                     log_data.append([name, recipient, f"Exception: {e}", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
 
                 time.sleep(delay)
+
+            st.info(f"✅ Sent: {success_count}, ❌ Failed: {failed_count}")
+
+            log_df = pd.DataFrame(log_data, columns=["Name", "Email", "Status", "Timestamp"])
+            csv_buffer = BytesIO()
+            log_df.to_csv(csv_buffer, index=False)
+            st.download_button("📥 Download Log CSV", data=csv_buffer.getvalue(), file_name="email_log.csv", mime="text/csv")

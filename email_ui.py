@@ -58,7 +58,9 @@ with st.expander("📬 Email Settings"):
 
 # Helper functions
 def is_valid_email(email):
-    return re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", str(email))
+    # Check if the email matches the regex pattern for valid emails
+    match = re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", str(email))
+    return bool(match)  # Returns True if email matches, False otherwise
 
 def email_exists(email):
     try:
@@ -101,9 +103,11 @@ with st.expander("🔍 Preview Final Email with Sample Data"):
 
 # Step 5: Display editable data grid and send emails
 if valid_file:
+    # Add validation logic to the 'Send' column to make sure all fields are valid
     df["Send"] = df.apply(lambda row: all(pd.notna([row['Name'], row['Email'], row['ID'], row['Password']])) and is_valid_email(row['Email']), axis=1)
+
     st.subheader("📄 Preview and Modify Data")
-    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)}, disabled=df['Send'].apply(lambda x: not x))
+    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)})
 
     if st.button("📬 Send Emails"):
         if not (sender_email and app_password):
@@ -112,7 +116,7 @@ if valid_file:
             log_data = []
             success_count, failed_count = 0, 0
             for index, row in edited_df.iterrows():
-                if not row.get("Send", True):
+                if not row.get("Send", True):  # Only send if 'Send' is checked
                     continue
 
                 recipient = row['Email']

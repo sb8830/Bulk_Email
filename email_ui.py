@@ -27,19 +27,19 @@ if file:
 
         # Normalize column names to lowercase for comparison
         normalized_columns = {col.lower(): col for col in df.columns}
-        required_columns = {'name', 'email', 'password', 'id'}
+        required_columns = {'name', 'email', 'email id', 'password'}
 
         if required_columns.issubset(normalized_columns):
             # Rename columns for consistency
             df.rename(columns={
                 normalized_columns['name']: 'Name',
-                normalized_columns['email']: 'Email',
+                normalized_columns['email id']: 'Email Id',
                 normalized_columns['password']: 'Password',
                 normalized_columns['id']: 'ID'
             }, inplace=True)
             valid_file = True
         else:
-            st.error("❗ File must contain the following columns: Name, Email, Password, ID")
+            st.error("❗ File must contain the following columns: Name, Email, Email ID, Password")
             df = None
 
     except Exception as e:

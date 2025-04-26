@@ -124,6 +124,12 @@ if valid_file:
                 password = row.get('Password', 'Not Provided')
                 user_id = row.get('ID', 'NA')
 
+                # Ensure the ID matches the email format (must be an email)
+                if not is_valid_email(user_id):
+                    st.error(f"❌ Invalid email ID for {name} ({user_id}), skipping.")
+                    failed_count += 1
+                    continue
+
                 if not is_valid_email(recipient) or not email_exists(recipient):
                     st.error(f"❌ Invalid or non-existent email for {name} ({recipient}), skipping.")
                     failed_count += 1

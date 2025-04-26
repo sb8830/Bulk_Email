@@ -106,8 +106,26 @@ if valid_file:
     # Add validation logic to the 'Send' column to make sure all fields are valid
     df["Send"] = df.apply(lambda row: all(pd.notna([row['Name'], row['Email'], row['ID'], row['Password']])) and is_valid_email(row['Email']), axis=1)
 
+    # Highlight rows where ID or Password is invalid
+    def highlight_invalid_rows(row):
+        if not row['ID'] or not is_valid_email(row['ID']) or not row['Password']:
+            return ['background-color: yellow'] * len(row)  # Highlight the row in yellow
+        return [''] * len(row)  # No highlight if valid
+
     st.subheader("📄 Preview and Modify Data")
-    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)})
+    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)},
+                               style_data_conditional=[{
+                                   'if': {'column_id': 'ID'},
+                                   'backgroundColor': 'yellow',
+                                   'color': 'black'
+                               }, {
+                                   'if': {'column_id': 'Password'},
+                                   'backgroundColor': 'yellow',
+                                   'color': 'black'
+                               }])
+
+    # Show the highlighted rows
+    edited_df.style.apply(highlight_invalid_rows, axis=1)
 
     if st.button("📬 Send Emails"):
         if not (sender_email and app_password):

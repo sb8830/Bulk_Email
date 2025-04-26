@@ -105,17 +105,26 @@ if valid_file:
     # Add validation logic to the 'Send' column
     df["Send"] = df.apply(lambda row: all(pd.notna([row['Name'], row['Email'], row['ID'], row['Password']])) and is_valid_email(row['Email']), axis=1)
 
-    # Highlight rows where ID or Password is invalid
+    # Function to highlight invalid rows (where ID or Password is missing/invalid)
     def highlight_invalid_rows(row):
         if not row['ID'] or not is_valid_email(row['ID']) or not row['Password']:
             return ['background-color: yellow'] * len(row)  # Highlight the row in yellow
         return [''] * len(row)  # No highlight if valid
 
+    # Display table with "Send" checkboxes for each row
     st.subheader("📄 Preview and Modify Data")
-    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, column_config={"Send": st.checkbox("Send", default=True)})
-    
-    # Apply row highlighting based on validation
-    edited_df.style.apply(highlight_invalid_rows, axis=1)
+    for i, row in df.iterrows():
+        # Create checkbox for each row dynamically
+        send_checkbox = st.checkbox(f"Send Email to {row['Name']} ({row['Email']})", value=row['Send'], key=i)
+
+        # If invalid data is found, highlight the row in yellow
+        if not is_valid_email(row['ID']) or not row['Password']:
+            st.markdown(f"<div style='background-color: yellow;'>{row.to_frame().T.to_html(index=False)}</div>", unsafe_allow_html=True)
+        else:
+            st.write(row)
+
+        # Save checkbox selection
+        df.at[i, 'Send'] = send_checkbox
 
     if st.button("📬 Send Emails"):
         if not (sender_email and app_password):
@@ -123,7 +132,7 @@ if valid_file:
         else:
             log_data = []
             success_count, failed_count = 0, 0
-            for index, row in edited_df.iterrows():
+            for index, row in df.iterrows():
                 if not row.get("Send", True):  # Only send if 'Send' is checked
                     continue
 

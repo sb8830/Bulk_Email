@@ -58,9 +58,8 @@ with st.expander("📬 Email Settings"):
 
 # Helper functions
 def is_valid_email(email):
-    # Check if the email matches the regex pattern for valid emails
     match = re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", str(email))
-    return bool(match)  # Returns True if email matches, False otherwise
+    return bool(match)
 
 def email_exists(email):
     try:
@@ -103,7 +102,7 @@ with st.expander("🔍 Preview Final Email with Sample Data"):
 
 # Step 5: Display editable data grid and send emails
 if valid_file:
-    # Add validation logic to the 'Send' column to make sure all fields are valid
+    # Add validation logic to the 'Send' column
     df["Send"] = df.apply(lambda row: all(pd.notna([row['Name'], row['Email'], row['ID'], row['Password']])) and is_valid_email(row['Email']), axis=1)
 
     # Highlight rows where ID or Password is invalid
@@ -113,18 +112,9 @@ if valid_file:
         return [''] * len(row)  # No highlight if valid
 
     st.subheader("📄 Preview and Modify Data")
-    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)},
-                               style_data_conditional=[{
-                                   'if': {'column_id': 'ID'},
-                                   'backgroundColor': 'yellow',
-                                   'color': 'black'
-                               }, {
-                                   'if': {'column_id': 'Password'},
-                                   'backgroundColor': 'yellow',
-                                   'color': 'black'
-                               }])
-
-    # Show the highlighted rows
+    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, column_config={"Send": st.checkbox("Send", default=True)})
+    
+    # Apply row highlighting based on validation
     edited_df.style.apply(highlight_invalid_rows, axis=1)
 
     if st.button("📬 Send Emails"):
@@ -142,7 +132,7 @@ if valid_file:
                 password = row.get('Password', 'Not Provided')
                 user_id = row.get('ID', 'NA')
 
-                # Ensure the ID matches the email format (must be an email)
+                # Ensure the ID matches the email format
                 if not is_valid_email(user_id):
                     st.error(f"❌ Invalid email ID for {name} ({user_id}), skipping.")
                     failed_count += 1
@@ -186,10 +176,3 @@ if valid_file:
                     log_data.append([name, recipient, f"Exception: {e}", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
 
                 time.sleep(delay)
-
-            st.info(f"✅ Sent: {success_count}, ❌ Failed: {failed_count}")
-
-            log_df = pd.DataFrame(log_data, columns=["Name", "Email", "Status", "Timestamp"])
-            csv_buffer = BytesIO()
-            log_df.to_csv(csv_buffer, index=False)
-            st.download_button("📥 Download Log CSV", data=csv_buffer.getvalue(), file_name="email_log.csv", mime="text/csv")

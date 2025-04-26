@@ -11,11 +11,12 @@ import dns.resolver
 import time
 
 st.set_page_config(page_title="Bulk Email Sender", layout="wide")
-st.title("📧 Bulk Email Sender")
+st.title("\ud83d\udce7 Bulk Email Sender")
 
 # Step 1: Upload Excel or CSV file
 file = st.file_uploader("Upload Excel or CSV file", type=["xlsx", "csv"])
-df = None
+if "data" not in st.session_state:
+    st.session_state.data = None
 valid_file = False
 
 if file:
@@ -36,30 +37,30 @@ if file:
                 'password': 'Password'
             }, inplace=True)
             valid_file = True
+            st.session_state.data = df.copy()
         else:
-            st.error("❗ File must contain the following columns (case-insensitive): name, sender email, email id, password")
-            df = None
+            st.error("\u2757 File must contain the following columns (case-insensitive): name, sender email, email id, password")
+            st.session_state.data = None
 
     except Exception as e:
-        st.error(f"❌ Failed to read file: {e}")
-        df = None
+        st.error(f"\u274c Failed to read file: {e}")
+        st.session_state.data = None
 
 # Step 2: Input Gmail credentials
-with st.expander("🔐 Email Credentials"):
+with st.expander("\ud83d\udd10 Email Credentials"):
     sender_email = st.text_input("Your Gmail Address", placeholder="your@email.com")
     app_password = st.text_input("Gmail App Password", type="password")
 
 # Step 3: Input CC, BCC, Subject
-with st.expander("📬 Email Settings"):
+with st.expander("\ud83d\udcec Email Settings"):
     cc_emails_input = st.text_area("CC Emails (comma/line-separated)", height=80)
     bcc_emails_input = st.text_area("BCC Emails (comma/line-separated)", height=80)
     subject = st.text_input("Email Subject", value="Welcome to Our Platform!")
-    delay = st.slider("⏱ Delay between emails (seconds)", min_value=0, max_value=60, value=1)
+    delay = st.slider("\u23f1 Delay between emails (seconds)", min_value=0, max_value=60, value=1)
 
 # Helper functions
 def is_valid_email(email):
-    match = re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", str(email))
-    return bool(match)
+    return re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", str(email))
 
 def email_exists(email):
     try:
@@ -74,7 +75,7 @@ cc_emails = [email.strip() for line in cc_emails_input.splitlines() for email in
 bcc_emails = [email.strip() for line in bcc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
 
 # Email body and signature editor
-st.subheader("📄 Email Body")
+st.subheader("\ud83d\udcc4 Email Body")
 html_body = st_quill(
     value="""
 <p><strong>Dear {name},</strong></p>
@@ -95,38 +96,44 @@ html_body = st_quill(
 )
 
 # Preview section
-with st.expander("🔍 Preview Final Email with Sample Data"):
-    if valid_file:
+with st.expander("\ud83d\udd0d Preview Final Email with Sample Data"):
+    if st.session_state.data is not None:
         preview_filled = html_body.format(name="John Doe", email="john@example.com", id="john@example.com", password="12345678")
         st.markdown(preview_filled, unsafe_allow_html=True)
 
 # Step 5: Display editable data grid and send emails
-if valid_file:
-    # Add validation logic to the 'Send' column
-    df["Send"] = df.apply(lambda row: all(pd.notna([row['Name'], row['Email'], row['ID'], row['Password']])) and is_valid_email(row['Email']), axis=1)
+if st.session_state.data is not None:
+    st.session_state.data["Send"] = st.session_state.data.apply(lambda row: all(pd.notna([row['Name'], row['Email'], row['ID'], row['Password']])) and is_valid_email(row['Email']), axis=1)
 
-    # Function to highlight invalid rows (where ID or Password is missing/invalid)
-    def highlight_invalid_rows(row):
-        if not row['ID'] or not is_valid_email(row['ID']) or not row['Password']:
-            return ['background-color: yellow'] * len(row)  # Highlight the row in yellow
-        return [''] * len(row)  # No highlight if valid
+    st.subheader("\ud83d\udcc4 Preview, Modify, and Add New Data")
 
-    # Apply row highlighting for invalid rows
-    df_styled = df.style.apply(highlight_invalid_rows, axis=1)
+    edited_df = st.data_editor(
+        st.session_state.data,
+        num_rows="dynamic",
+        use_container_width=True,
+        column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)}
+    )
 
-    # Display the data as a table with the 'Send' checkbox and validation highlights
-    st.subheader("📄 Preview and Modify Data")
-    edited_df = st.dataframe(df_styled)
+    if st.button("\u2795 Add New Entry"):
+        new_row = {
+            'Name': '',
+            'Email': '',
+            'ID': '',
+            'Password': '',
+            'Send': True
+        }
+        st.session_state.data = pd.concat([st.session_state.data, pd.DataFrame([new_row])], ignore_index=True)
 
-    # Button to send emails
-    if st.button("📬 Send Emails"):
+    st.session_state.data = edited_df
+
+    if st.button("\ud83d\udcec Send Emails"):
         if not (sender_email and app_password):
-            st.warning("⚠️ Please provide your email and app password.")
+            st.warning("\u26a0\ufe0f Please provide your email and app password.")
         else:
             log_data = []
             success_count, failed_count = 0, 0
-            for index, row in df.iterrows():
-                if not row.get("Send", True):  # Only send if 'Send' is checked
+            for index, row in st.session_state.data.iterrows():
+                if not row.get("Send", True):
                     continue
 
                 recipient = row['Email']
@@ -134,14 +141,8 @@ if valid_file:
                 password = row.get('Password', 'Not Provided')
                 user_id = row.get('ID', 'NA')
 
-                # Ensure the ID matches the email format
-                if not is_valid_email(user_id):
-                    st.error(f"❌ Invalid email ID for {name} ({user_id}), skipping.")
-                    failed_count += 1
-                    continue
-
                 if not is_valid_email(recipient) or not email_exists(recipient):
-                    st.error(f"❌ Invalid or non-existent email for {name} ({recipient}), skipping.")
+                    st.error(f"\u274c Invalid or non-existent email for {name} ({recipient}), skipping.")
                     failed_count += 1
                     continue
 
@@ -165,23 +166,23 @@ if valid_file:
                         response = server.sendmail(sender_email, to_addrs, msg.as_string())
 
                     if recipient not in response:
-                        st.success(f"✅ Email sent to {name} ({recipient})")
+                        st.success(f"\u2705 Email sent to {name} ({recipient})")
                         success_count += 1
                         log_data.append([name, recipient, "Success", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
                     else:
-                        st.error(f"❌ SMTP error for {name} ({recipient})")
+                        st.error(f"\u274c SMTP error for {name} ({recipient})")
                         failed_count += 1
                         log_data.append([name, recipient, "SMTP Rejected", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
                 except Exception as e:
-                    st.error(f"❌ Failed for {name} ({recipient}): {e}")
+                    st.error(f"\u274c Failed for {name} ({recipient}): {e}")
                     failed_count += 1
                     log_data.append([name, recipient, f"Exception: {e}", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
 
                 time.sleep(delay)
 
-            st.info(f"✅ Sent: {success_count}, ❌ Failed: {failed_count}")
+            st.info(f"\u2705 Sent: {success_count}, \u274c Failed: {failed_count}")
 
             log_df = pd.DataFrame(log_data, columns=["Name", "Email", "Status", "Timestamp"])
             csv_buffer = BytesIO()
             log_df.to_csv(csv_buffer, index=False)
-            st.download_button("📥 Download Log CSV", data=csv_buffer.getvalue(), file_name="email_log.csv", mime="text/csv")
+            st.download_button("\ud83d\udcc5 Download Log CSV", data=csv_buffer.getvalue(), file_name="email_log.csv", mime="text/csv")

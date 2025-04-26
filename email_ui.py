@@ -26,20 +26,28 @@ if file:
             df = pd.read_excel(file)
 
         # Normalize column names to lowercase for comparison
-        normalized_columns = {col.lower(): col for col in df.columns}
-        required_columns = {'name', 'email', 'email id', 'password'}
+        df.columns = [col.lower().strip() for col in df.columns]
+        column_mapping = {
+            'name': None,
+            'sender email': None,
+            'email id': None,
+            'password': None
+        }
 
-        if required_columns.issubset(normalized_columns):
-            # Rename columns for consistency
+        for col in df.columns:
+            if col in column_mapping:
+                column_mapping[col] = col
+
+        if all(column_mapping.values()):
             df.rename(columns={
-                normalized_columns['name']: 'Name',
-                normalized_columns['email id']: 'Email Id',
-                normalized_columns['password']: 'Password',
-                normalized_columns['id']: 'ID'
+                column_mapping['name']: 'Name',
+                column_mapping['sender email']: 'Email',
+                column_mapping['email id']: 'ID',
+                column_mapping['password']: 'Password'
             }, inplace=True)
             valid_file = True
         else:
-            st.error("❗ File must contain the following columns: Name, Email, Email ID, Password")
+            st.error("❗ File must contain the following columns (case-insensitive): name, sender email, email id, password")
             df = None
 
     except Exception as e:

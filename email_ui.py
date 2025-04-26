@@ -103,7 +103,7 @@ with st.expander("🔍 Preview Final Email with Sample Data"):
 if valid_file:
     df["Send"] = df.apply(lambda row: all(pd.notna([row['Name'], row['Email'], row['ID'], row['Password']])) and is_valid_email(row['Email']), axis=1)
     st.subheader("📄 Preview and Modify Data")
-    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)})
+    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)}, disabled=df['Send'].apply(lambda x: not x))
 
     if st.button("📬 Send Emails"):
         if not (sender_email and app_password):

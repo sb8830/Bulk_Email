@@ -8,6 +8,7 @@ from streamlit_quill import st_quill
 from io import BytesIO
 from datetime import datetime
 import dns.resolver
+import time
 
 st.set_page_config(page_title="Bulk Email Sender", layout="wide")
 st.title("📧 Bulk Email Sender")
@@ -54,6 +55,7 @@ with st.expander("📬 Email Settings"):
     cc_emails_input = st.text_area("CC Emails (comma/line-separated)", height=80)
     bcc_emails_input = st.text_area("BCC Emails (comma/line-separated)", height=80)
     subject = st.text_input("Email Subject", value="Welcome to Our Platform!")
+    delay = st.slider("⏱ Delay between emails (seconds)", min_value=0, max_value=60, value=1)
 
 # Helper function to validate email address format
 def is_valid_email(email):
@@ -155,6 +157,8 @@ if valid_file:
                     st.error(f"❌ Failed for {name} ({recipient}): {e}")
                     failed_count += 1
                     log_data.append([name, recipient, f"Exception: {e}", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
+
+                time.sleep(delay)
 
             st.info(f"✅ Sent: {success_count}, ❌ Failed: {failed_count}")
 

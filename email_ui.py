@@ -9,20 +9,17 @@ from io import BytesIO
 from datetime import datetime
 import time
 
-# Must be the very first Streamlit command
-st.set_page_config(page_title="📧 Bulk Email Sender", layout="wide")
-
-# --- User database: username -> dict with password and role ---
+# --- Credentials for demo --- #
+# In real app, store securely (env vars, secrets manager)
 USERS = {
     "admin": {"password": "admin123", "role": "admin"},
-    "user1": {"password": "user123", "role": "user"},
+    "user": {"password": "user123", "role": "user"},
 }
 
-# Helper: Email validation
+# --- Helpers --- #
 def is_valid_email(email):
     return bool(re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", str(email)))
 
-# Highlight invalid cells in dataframe
 def highlight_invalid_cells(row):
     styles = [''] * len(row)
     if not is_valid_email(row['Email']):
@@ -33,44 +30,50 @@ def highlight_invalid_cells(row):
         styles[row.index.get_loc('Password')] = 'background-color: #FFD6D6;'
     return styles
 
-# Login page
-def login():
-    st.title("🔐 Login to Bulk Email Sender")
-
-    username = st.text_input("Username")
-    password = st.text_input("Password", type="password")
-    login_button = st.button("Login")
-
-    if login_button:
-        if username in USERS and USERS[username]["password"] == password:
-            st.session_state["logged_in"] = True
-            st.session_state["username"] = username
-            st.session_state["role"] = USERS[username]["role"]
-            st.success(f"Welcome, {username}!")
-            st.experimental_rerun()
-        else:
-            st.error("❌ Invalid username or password")
-
-# Logout button
+# --- Logout function with single click fix --- #
 def logout():
     if st.button("🚪 Logout"):
         for key in ["logged_in", "username", "role", "data"]:
             if key in st.session_state:
                 del st.session_state[key]
-        st.success("Logged out successfully.")
+        st.session_state["logout_clicked"] = True
+
+# --- Login panel --- #
+def login():
+    st.title("🔐 Login to Bulk Email Sender")
+    username = st.text_input("Username")
+    password = st.text_input("Password", type="password")
+    login_btn = st.button("Login")
+
+    if login_btn:
+        if username in USERS and USERS[username]["password"] == password:
+            st.session_state["logged_in"] = True
+            st.session_state["username"] = username
+            st.session_state["role"] = USERS[username]["role"]
+            st.experimental_rerun()
+        else:
+            st.error("❌ Invalid username or password")
+
+# --- Main app --- #
+def run_app():
+    st.set_page_config(page_title="📧 Bulk Email Sender", layout="wide")
+
+    # If not logged in, show login page
+    if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
+        login()
+        return
+
+    # If logout clicked, rerun once and clear flag
+    logout()
+    if st.session_state.get("logout_clicked", False):
+        del st.session_state["logout_clicked"]
         st.experimental_rerun()
 
-# Main app after login
-def run_app():
-    logout()
-
     st.sidebar.image("https://www.invesmate.com/assets/images/logo.png", width=200)
-    st.sidebar.markdown("Developed by Invesmate Admin Team")
-    st.title("📧 Bulk Email Sender")
+    st.sidebar.markdown(f"**Logged in as:** {st.session_state['username']} ({st.session_state['role']})")
+    st.sidebar.markdown("---")
 
-    # Admin-specific message
-    if st.session_state.get("role") == "admin":
-        st.info("⚙️ You are logged in as Admin.")
+    st.title("📧 Bulk Email Sender")
 
     # Step 1: Upload file
     st.header("1️⃣ Upload Recipient Data")
@@ -119,7 +122,7 @@ def run_app():
     cc_emails = [e.strip() for l in cc_emails_input.splitlines() for e in l.split(',') if is_valid_email(e.strip())]
     bcc_emails = [e.strip() for l in bcc_emails_input.splitlines() for e in l.split(',') if is_valid_email(e.strip())]
 
-    # Step 4: Compose email body
+    # Step 4: Compose email
     st.header("4️⃣ Compose Email Body")
     html_body = st_quill(
         value="""
@@ -135,10 +138,9 @@ def run_app():
         key="rich_email_body"
     )
 
-    # Step 5: Review and send
+    # Step 5: Review and Send
     if st.session_state.data is not None:
         st.header("5️⃣ Review, Edit, and Send")
-
         edited_df = st.data_editor(
             st.session_state.data,
             num_rows="dynamic",
@@ -208,8 +210,6 @@ def run_app():
                 log_df.to_csv(buffer, index=False)
                 st.download_button("📥 Download Log File", data=buffer.getvalue(), file_name="email_log.csv", mime="text/csv")
 
-# --- Main execution ---
-if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
-    login()
-else:
+
+if __name__ == "__main__":
     run_app()

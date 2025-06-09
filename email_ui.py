@@ -1,64 +1,70 @@
+import streamlit as st
 import pandas as pd
 import smtplib
 import re
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
-import streamlit as st
 from streamlit_quill import st_quill
 from io import BytesIO
 from datetime import datetime
 import time
 
-# ---------- User Credentials & Roles ----------
-USERS = {
+# Page setup
+st.set_page_config(page_title="📧 Bulk Email Sender", layout="wide")
+st.title("📧 Bulk Email Sender")
+st.sidebar.image("https://www.invesmate.com/assets/images/logo.png", width=200)
+st.sidebar.markdown("Developed by Invesmate Admin Team")
+
+# Dummy credentials - you can replace this with a secure database later
+USER_CREDENTIALS = {
     "admin@invesmate.com": {"password": "admin123", "role": "admin"},
-    "user1@invesmate.com": {"password": "user123", "role": "user"},
-    "user2@invesmate.com": {"password": "user123", "role": "user"},
+    "user@invesmate.com": {"password": "user123", "role": "user"},
 }
 
-# ---------- Authentication ----------
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
-    st.session_state.user_role = None
-    st.session_state.username = ""
+# Initialize session state
+for key in ["logged_in", "user_email", "user_role", "data"]:
+    if key not in st.session_state:
+        st.session_state[key] = None if key == "data" else False
 
+# Login form
 def login():
-    st.title("🔐 Login to Bulk Email Sender")
-    username = st.text_input("Email")
-    password = st.text_input("Password", type="password")
-    if st.button("Login"):
-        user = USERS.get(username)
-        if user and user["password"] == password:
-            st.session_state.authenticated = True
-            st.session_state.user_role = user["role"]
-            st.session_state.username = username
-            st.success(f"✅ Logged in as {user['role'].capitalize()}")
-            st.experimental_rerun()
-        else:
-            st.error("❌ Invalid email or password")
+    with st.form("login_form"):
+        st.subheader("🔐 Please log in to continue")
+        email = st.text_input("Email")
+        password = st.text_input("Password", type="password")
+        submitted = st.form_submit_button("Login")
 
-if not st.session_state.authenticated:
-    login()
-    st.stop()
+        if submitted:
+            user = USER_CREDENTIALS.get(email)
+            if user and user["password"] == password:
+                st.session_state.logged_in = True
+                st.session_state.user_email = email
+                st.session_state.user_role = user["role"]
+                st.success("✅ Login successful!")
+                time.sleep(1)
+                st.experimental_rerun()
+            else:
+                st.error("❌ Invalid email or password")
 
-# ---------- Shared Settings ----------
-st.set_page_config(page_title="📧 Bulk Email Sender", layout="wide")
-st.sidebar.image("https://www.invesmate.com/assets/images/logo.png", width=200)
-st.sidebar.markdown(f"Logged in as: **{st.session_state.username}**")
-if st.sidebar.button("Logout"):
-    st.session_state.authenticated = False
-    st.session_state.user_role = None
-    st.experimental_rerun()
+# Email validation
+def is_valid_email(email):
+    return bool(re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", str(email)))
 
-# ---------- Admin Panel ----------
-if st.session_state.user_role == "admin":
-    st.title("📧 Bulk Email Sender - Admin Panel")
+# Highlight invalid cells
+def highlight_invalid_cells(row):
+    styles = [''] * len(row)
+    if not is_valid_email(row['Email']):
+        styles[row.index.get_loc('Email')] = 'background-color: #FFD6D6;'
+    if not is_valid_email(row['ID']):
+        styles[row.index.get_loc('ID')] = 'background-color: #FFD6D6;'
+    if pd.isna(row['Password']) or row['Password'] == '':
+        styles[row.index.get_loc('Password')] = 'background-color: #FFD6D6;'
+    return styles
 
+# Main App
+def run_app():
     st.header("1️⃣ Upload Recipient Data")
     file = st.file_uploader("Upload an Excel or CSV file", type=["xlsx", "csv"])
-    if "data" not in st.session_state:
-        st.session_state.data = None
-
     if file:
         try:
             df = pd.read_csv(file) if file.name.endswith(".csv") else pd.read_excel(file)
@@ -79,43 +85,37 @@ if st.session_state.user_role == "admin":
         except Exception as e:
             st.error(f"❌ Failed to read file: {e}")
 
-    st.header("2️⃣ Setup Email Credentials")
-    with st.expander("🔒 Gmail Login"):
-        sender_email = st.text_input("Gmail Address", placeholder="you@gmail.com")
-        app_password = st.text_input("Gmail App Password", type="password")
-
-    st.header("3️⃣ Configure Email Settings")
-    with st.expander("✉️ CC / BCC / Subject Settings"):
-        cc_emails_input = st.text_area("CC Emails (comma/line-separated)", height=70)
-        bcc_emails_input = st.text_area("BCC Emails (comma/line-separated)", height=70)
-        subject = st.text_input("Email Subject", value="Welcome to Invesmate!")
-        delay = st.slider("⏱ Delay between emails (seconds)", 0, 60, 2)
-
-    def is_valid_email(email):
-        return bool(re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", str(email)))
-
-    def highlight_invalid_cells(row):
-        styles = [''] * len(row)
-        if not is_valid_email(row['Email']):
-            styles[row.index.get_loc('Email')] = 'background-color: #FFD6D6;'
-        if not is_valid_email(row['ID']):
-            styles[row.index.get_loc('ID')] = 'background-color: #FFD6D6;'
-        if pd.isna(row['Password']) or row['Password'] == '':
-            styles[row.index.get_loc('Password')] = 'background-color: #FFD6D6;'
-        return styles
-
-    cc_emails = [e.strip() for l in cc_emails_input.splitlines() for e in l.split(',') if is_valid_email(e.strip())]
-    bcc_emails = [e.strip() for l in bcc_emails_input.splitlines() for e in l.split(',') if is_valid_email(e.strip())]
-
-    st.header("4️⃣ Compose Email Body")
+    st.header("2️⃣ Compose Email Body")
     html_body = st_quill(
-        value="""<p><strong>Dear {name},</strong></p><p>Welcome to Invesmate! Your company account has been created.</p><p><strong>Email:</strong> {id}<br><strong>Temporary Password:</strong> {password}</p><p>🔗 Access your account: <a href='https://outlook.office.com/mail/'>Outlook</a></p><p>For any help, contact Admin Support.</p><p>Regards,<br><strong>Invesmate Team</strong></p><img src='https://www.invesmate.com/tracking_open.png?email={email}' width='1' height='1' style='display:none'>""",
+        value="""
+<p><strong>Dear {name},</strong></p>
+<p>Welcome to Invesmate! Your company account has been created.</p>
+<p><strong>Email:</strong> {id}<br><strong>Temporary Password:</strong> {password}</p>
+<p>🔗 Access your account: <a href='https://outlook.office.com/mail/'>Outlook</a></p>
+<p>For any help, contact Admin Support.</p>
+<p>Regards,<br><strong>Invesmate Team</strong></p>
+<img src='https://www.invesmate.com/tracking_open.png?email={email}' width='1' height='1' style='display:none'>
+""",
         html=True,
         key="rich_email_body"
     )
 
+    if st.session_state.user_role == "admin":
+        st.header("3️⃣ Email Credentials and Settings")
+        sender_email = st.text_input("Gmail Address", placeholder="you@gmail.com")
+        app_password = st.text_input("Gmail App Password", type="password")
+
+        with st.expander("✉️ CC / BCC / Subject Settings"):
+            cc_emails_input = st.text_area("CC Emails (comma/line-separated)", height=70)
+            bcc_emails_input = st.text_area("BCC Emails (comma/line-separated)", height=70)
+            subject = st.text_input("Email Subject", value="Welcome to Invesmate!")
+            delay = st.slider("⏱ Delay between emails (seconds)", 0, 60, 2)
+
+        cc_emails = [e.strip() for l in cc_emails_input.splitlines() for e in l.split(',') if is_valid_email(e.strip())]
+        bcc_emails = [e.strip() for l in bcc_emails_input.splitlines() for e in l.split(',') if is_valid_email(e.strip())]
+
     if st.session_state.data is not None:
-        st.header("5️⃣ Review, Edit, and Send")
+        st.header("4️⃣ Review and Send")
         edited_df = st.data_editor(
             st.session_state.data,
             num_rows="dynamic",
@@ -123,85 +123,71 @@ if st.session_state.user_role == "admin":
             column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)}
         )
         st.session_state.data = edited_df.copy()
-
         styled_df = edited_df.style.apply(highlight_invalid_cells, axis=1)
         st.dataframe(styled_df, use_container_width=True)
 
-        if st.button("🚀 Send Bulk Emails"):
-            if not (sender_email and app_password):
-                st.warning("⚠️ Please provide Gmail address and app password.")
-            else:
-                progress = st.progress(0)
-                log_data = []
-                success, failure = 0, 0
-                to_send_df = st.session_state.data[st.session_state.data['Send'] == True]
-                total = len(to_send_df)
+        if st.session_state.user_role == "admin":
+            if st.button("🚀 Send Bulk Emails"):
+                if not (sender_email and app_password):
+                    st.warning("⚠️ Please provide Gmail address and app password.")
+                else:
+                    progress = st.progress(0)
+                    log_data = []
+                    success, failure = 0, 0
+                    to_send_df = edited_df[edited_df['Send'] == True]
+                    total = len(to_send_df)
 
-                for i, (index, row) in enumerate(to_send_df.iterrows()):
-                    recipient = row['Email']
-                    name = row['Name']
-                    user_id = row['ID']
-                    pwd = row['Password']
+                    for i, (index, row) in enumerate(to_send_df.iterrows()):
+                        recipient = row['Email']
+                        name = row['Name']
+                        user_id = row['ID']
+                        pwd = row['Password']
 
-                    if not (is_valid_email(recipient) and is_valid_email(user_id) and pwd):
-                        st.error(f"❌ Skipping {name} ({recipient}): Invalid Email/ID/Password.")
-                        failure += 1
-                        continue
+                        if not (is_valid_email(recipient) and is_valid_email(user_id) and pwd):
+                            st.error(f"❌ Skipping {name} ({recipient}): Invalid Email/ID/Password.")
+                            failure += 1
+                            continue
 
-                    try:
-                        msg = MIMEMultipart("alternative")
-                        msg['From'] = sender_email
-                        msg['To'] = recipient
-                        msg['Subject'] = subject
-                        if cc_emails:
-                            msg['Cc'] = ", ".join(cc_emails)
+                        try:
+                            msg = MIMEMultipart("alternative")
+                            msg['From'] = sender_email
+                            msg['To'] = recipient
+                            msg['Subject'] = subject
+                            if cc_emails:
+                                msg['Cc'] = ", ".join(cc_emails)
 
-                        filled_body = html_body.format(name=name, email=recipient, id=user_id, password=pwd)
-                        msg.attach(MIMEText(filled_body, 'html'))
+                            filled_body = html_body.format(name=name, email=recipient, id=user_id, password=pwd)
+                            msg.attach(MIMEText(filled_body, 'html'))
 
-                        to_addresses = [recipient] + cc_emails + bcc_emails
+                            to_addresses = [recipient] + cc_emails + bcc_emails
 
-                        with smtplib.SMTP("smtp.gmail.com", 587) as server:
-                            server.starttls()
-                            server.login(sender_email, app_password)
-                            server.sendmail(sender_email, to_addresses, msg.as_string())
+                            with smtplib.SMTP("smtp.gmail.com", 587) as server:
+                                server.starttls()
+                                server.login(sender_email, app_password)
+                                server.sendmail(sender_email, to_addresses, msg.as_string())
 
-                        st.success(f"✅ Sent to {name} ({recipient})")
-                        success += 1
-                        log_data.append([name, recipient, "Success", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
+                            st.success(f"✅ Sent to {name} ({recipient})")
+                            success += 1
+                            log_data.append([name, recipient, "Success", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
 
-                    except Exception as e:
-                        st.error(f"❌ Failed to send to {name}: {str(e)}")
-                        failure += 1
-                        log_data.append([name, recipient, f"Failed: {str(e)}", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
+                        except Exception as e:
+                            st.error(f"❌ Failed to send to {name}: {str(e)}")
+                            failure += 1
+                            log_data.append([name, recipient, f"Failed: {str(e)}", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
 
-                    time.sleep(delay)
-                    progress.progress((i + 1) / total)
+                        time.sleep(delay)
+                        progress.progress((i + 1) / total)
 
-                st.info(f"📢 Summary: {success} Sent | {failure} Failed")
+                    st.info(f"📢 Summary: {success} Sent | {failure} Failed")
+                    log_df = pd.DataFrame(log_data, columns=["Name", "Email", "Status", "Timestamp"])
+                    buffer = BytesIO()
+                    log_df.to_csv(buffer, index=False)
+                    st.download_button("📥 Download Log File", data=buffer.getvalue(), file_name="email_log.csv", mime="text/csv")
 
-                log_df = pd.DataFrame(log_data, columns=["Name", "Email", "Status", "Timestamp"])
-                buffer = BytesIO()
-                log_df.to_csv(buffer, index=False)
-                st.download_button("📥 Download Log File", data=buffer.getvalue(), file_name="email_log.csv", mime="text/csv")
-
-# ---------- Normal User Panel ----------
-elif st.session_state.user_role == "user":
-    st.title("📧 Bulk Email Sender - User Panel")
-
-    file = st.file_uploader("Upload recipient list (Name, Email ID only)", type=["csv", "xlsx"])
-    if file:
-        df = pd.read_csv(file) if file.name.endswith(".csv") else pd.read_excel(file)
-        df.columns = [col.lower().strip() for col in df.columns]
-        if {'name', 'email id'}.issubset(df.columns):
-            st.success("✅ File uploaded successfully.")
-            st.dataframe(df)
-        else:
-            st.error("❌ Required columns: name, email id")
-
-    st.header("✍️ Compose Email (Preview Only)")
-    html_body = st_quill(html=True, key="user_email_body")
-    st.markdown("📄 Preview Email Below")
-    st.write(html_body)
-
-    st.info("This is a preview-only mode. Please contact Admin for sending permissions.")
+# App flow control
+if not st.session_state.logged_in:
+    login()
+    st.stop()
+else:
+    st.sidebar.success(f"✅ Logged in as {st.session_state.user_email} ({st.session_state.user_role})")
+    run_app()

@@ -56,8 +56,17 @@ def highlight_invalid_cells(row):
 # --- Main App Function ---
 def run_app():
     st.title("📧 Bulk Email Sender")
+    
+    # Sidebar info + logout button
     st.sidebar.image("https://www.invesmate.com/assets/images/logo.png", width=200)
     st.sidebar.markdown(f"Logged in as: **{st.session_state.username}** ({st.session_state.role})")
+    
+    if st.sidebar.button("🔓 Logout"):
+        st.session_state.logged_in = False
+        st.session_state.username = ""
+        st.session_state.role = ""
+        st.session_state.data = None
+        st.experimental_rerun()
 
     # Step 1: Upload
     if st.session_state.role == "admin":

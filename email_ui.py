@@ -89,15 +89,17 @@ def run_app():
 
     # Step 2: Credentials
     st.header("2️⃣ Setup Email Credentials")
-    with st.expander("🔒 Gmail Login"):
+    with st.expander("🔐 Gmail Login"):
         sender_email = st.text_input("Gmail Address", placeholder="you@gmail.com")
         app_password = st.text_input("Gmail App Password", type="password")
 
     # Step 3: Email Settings
     st.header("3️⃣ Configure Email Settings")
     with st.expander("✉️ CC / BCC / Subject Settings"):
-        cc_input = st.text_area("CC Emails", height=50, key="cc_input")
-        bcc_input = st.text_area("BCC Emails", height=50, key="bcc_input")
+        cc_input, bcc_input = "", ""
+        if st.session_state.get("logged_in", False):
+            cc_input = st.text_area("CC Emails", height=50, key="cc_input")
+            bcc_input = st.text_area("BCC Emails", height=50, key="bcc_input")
         subject = st.text_input("Email Subject", value="Welcome to Invesmate!")
         delay = st.slider("⏱ Delay between emails (seconds)", 0, 60, 2)
 
@@ -181,7 +183,7 @@ def run_app():
                 log_df = pd.DataFrame(log_data, columns=["Name", "Email", "Status", "Timestamp"])
                 buffer = BytesIO()
                 log_df.to_csv(buffer, index=False)
-                st.download_button("📥 Download Log File", data=buffer.getvalue(), file_name="email_log.csv", mime="text/csv")
+                st.download_button("📅 Download Log File", data=buffer.getvalue(), file_name="email_log.csv", mime="text/csv")
 
 # Main entry
 if __name__ == "__main__":

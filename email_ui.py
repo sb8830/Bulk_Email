@@ -9,16 +9,20 @@ from io import BytesIO
 from datetime import datetime
 import time
 
-# ----- User DB (hardcoded for demo) -----
-USER_DB = {
+# Must be the very first Streamlit command
+st.set_page_config(page_title="📧 Bulk Email Sender", layout="wide")
+
+# --- User database: username -> dict with password and role ---
+USERS = {
     "admin": {"password": "admin123", "role": "admin"},
-    "user": {"password": "user123", "role": "user"}
+    "user1": {"password": "user123", "role": "user"},
 }
 
-# ----- Helpers -----
+# Helper: Email validation
 def is_valid_email(email):
     return bool(re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", str(email)))
 
+# Highlight invalid cells in dataframe
 def highlight_invalid_cells(row):
     styles = [''] * len(row)
     if not is_valid_email(row['Email']):
@@ -29,80 +33,88 @@ def highlight_invalid_cells(row):
         styles[row.index.get_loc('Password')] = 'background-color: #FFD6D6;'
     return styles
 
-# ----- Login Page -----
+# Login page
 def login():
-    st.title("🔐 Bulk Email Sender - Login")
+    st.title("🔐 Login to Bulk Email Sender")
+
     username = st.text_input("Username")
     password = st.text_input("Password", type="password")
     login_button = st.button("Login")
 
     if login_button:
-        if username in USER_DB and USER_DB[username]["password"] == password:
-            st.session_state.logged_in = True
-            st.session_state.username = username
-            st.session_state.role = USER_DB[username]["role"]
-            st.success(f"Welcome {username}!")
+        if username in USERS and USERS[username]["password"] == password:
+            st.session_state["logged_in"] = True
+            st.session_state["username"] = username
+            st.session_state["role"] = USERS[username]["role"]
+            st.success(f"Welcome, {username}!")
             st.experimental_rerun()
         else:
-            st.error("Invalid username or password")
+            st.error("❌ Invalid username or password")
 
-# ----- Main App Page -----
+# Logout button
+def logout():
+    if st.button("🚪 Logout"):
+        for key in ["logged_in", "username", "role", "data"]:
+            if key in st.session_state:
+                del st.session_state[key]
+        st.success("Logged out successfully.")
+        st.experimental_rerun()
+
+# Main app after login
 def run_app():
-    st.set_page_config(page_title="📧 Bulk Email Sender", layout="wide")
-    st.title("📧 Bulk Email Sender")
+    logout()
+
     st.sidebar.image("https://www.invesmate.com/assets/images/logo.png", width=200)
     st.sidebar.markdown("Developed by Invesmate Admin Team")
-    st.sidebar.markdown(f"Logged in as **{st.session_state.username}** ({st.session_state.role})")
+    st.title("📧 Bulk Email Sender")
 
-    # Admin can upload and see all features, user can only see limited view or view only
-    is_admin = (st.session_state.role == "admin")
+    # Admin-specific message
+    if st.session_state.get("role") == "admin":
+        st.info("⚙️ You are logged in as Admin.")
 
-    # Step 1: Upload file (only for admin)
-    if is_admin:
-        st.header("1️⃣ Upload Recipient Data")
-        file = st.file_uploader("Upload an Excel or CSV file", type=["xlsx", "csv"])
-        if "data" not in st.session_state:
-            st.session_state.data = None
+    # Step 1: Upload file
+    st.header("1️⃣ Upload Recipient Data")
+    file = st.file_uploader("Upload an Excel or CSV file", type=["xlsx", "csv"])
+    if "data" not in st.session_state:
+        st.session_state.data = None
 
-        if file:
-            try:
-                if file.name.endswith(".csv"):
-                    df = pd.read_csv(file)
-                else:
-                    df = pd.read_excel(file)
+    if file:
+        try:
+            if file.name.endswith(".csv"):
+                df = pd.read_csv(file)
+            else:
+                df = pd.read_excel(file)
 
-                df.columns = [col.lower().strip() for col in df.columns]
-                required_columns = {'name', 'sender email', 'email id', 'password'}
-                if required_columns.issubset(set(df.columns)):
-                    df.rename(columns={
-                        'name': 'Name',
-                        'sender email': 'Email',
-                        'email id': 'ID',
-                        'password': 'Password'
-                    }, inplace=True)
-                    df['Send'] = True
-                    st.session_state.data = df
-                    st.success("✅ File uploaded and validated successfully!")
-                else:
-                    st.error("❗ Required columns missing: name, sender email, email id, password")
-            except Exception as e:
-                st.error(f"❌ Failed to read file: {e}")
-    else:
-        st.info("You have limited access. Please contact admin for full features.")
+            df.columns = [col.lower().strip() for col in df.columns]
+            required_columns = {'name', 'sender email', 'email id', 'password'}
+            if required_columns.issubset(set(df.columns)):
+                df.rename(columns={
+                    'name': 'Name',
+                    'sender email': 'Email',
+                    'email id': 'ID',
+                    'password': 'Password'
+                }, inplace=True)
+                df['Send'] = True
+                st.session_state.data = df
+                st.success("✅ File uploaded and validated successfully!")
+            else:
+                st.error("❗ Required columns missing: name, sender email, email id, password")
+        except Exception as e:
+            st.error(f"❌ Failed to read file: {e}")
 
-    # Step 2: Email credentials (both admin and user)
+    # Step 2: Email credentials
     st.header("2️⃣ Setup Email Credentials")
     with st.expander("🔒 Gmail Login"):
-        sender_email = st.text_input("Gmail Address", placeholder="you@gmail.com", key="sender_email")
-        app_password = st.text_input("Gmail App Password", type="password", key="app_password")
+        sender_email = st.text_input("Gmail Address", placeholder="you@gmail.com")
+        app_password = st.text_input("Gmail App Password", type="password")
 
     # Step 3: Email Settings
     st.header("3️⃣ Configure Email Settings")
     with st.expander("✉️ CC / BCC / Subject Settings"):
-        cc_emails_input = st.text_area("CC Emails (comma/line-separated)", height=70, key="cc_input")
-        bcc_emails_input = st.text_area("BCC Emails (comma/line-separated)", height=70, key="bcc_input")
-        subject = st.text_input("Email Subject", value="Welcome to Invesmate!", key="subject")
-        delay = st.slider("⏱ Delay between emails (seconds)", 0, 60, 2, key="delay")
+        cc_emails_input = st.text_area("CC Emails (comma/line-separated)", height=70)
+        bcc_emails_input = st.text_area("BCC Emails (comma/line-separated)", height=70)
+        subject = st.text_input("Email Subject", value="Welcome to Invesmate!")
+        delay = st.slider("⏱ Delay between emails (seconds)", 0, 60, 2)
 
     cc_emails = [e.strip() for l in cc_emails_input.splitlines() for e in l.split(',') if is_valid_email(e.strip())]
     bcc_emails = [e.strip() for l in bcc_emails_input.splitlines() for e in l.split(',') if is_valid_email(e.strip())]
@@ -123,8 +135,8 @@ def run_app():
         key="rich_email_body"
     )
 
-    # Step 5: Review, Edit, and Send (only for admin)
-    if is_admin and st.session_state.data is not None:
+    # Step 5: Review and send
+    if st.session_state.data is not None:
         st.header("5️⃣ Review, Edit, and Send")
 
         edited_df = st.data_editor(
@@ -196,25 +208,8 @@ def run_app():
                 log_df.to_csv(buffer, index=False)
                 st.download_button("📥 Download Log File", data=buffer.getvalue(), file_name="email_log.csv", mime="text/csv")
 
-# ----- Main -----
-if "logged_in" not in st.session_state:
-    st.session_state.logged_in = False
-    st.session_state.username = ""
-    st.session_state.role = ""
-    st.session_state.data = None
-
-def logout():
-    for key in ["logged_in", "username", "role", "data"]:
-        if key in st.session_state:
-            del st.session_state[key]
-    st.experimental_rerun()
-
-# Logout button shown in sidebar if logged in
-if st.session_state.logged_in:
-    st.sidebar.button("🔓 Logout", on_click=logout)
-
-# Show login or main app
-if not st.session_state.logged_in:
+# --- Main execution ---
+if "logged_in" not in st.session_state or not st.session_state["logged_in"]:
     login()
 else:
     run_app()

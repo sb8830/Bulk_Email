@@ -209,7 +209,19 @@ if "logged_in" not in st.session_state:
     st.session_state.role = ""
     st.session_state.data = None
 
+def logout():
+    for key in ["logged_in", "username", "role", "data"]:
+        if key in st.session_state:
+            del st.session_state[key]
+    st.experimental_rerun()
+
+# Show logout button in sidebar only if logged in
+if st.session_state.logged_in:
+    if st.sidebar.button("🔓 Logout"):
+        logout()
+
 if not st.session_state.logged_in:
     login()
 else:
     run_app()
+

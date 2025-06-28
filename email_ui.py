@@ -19,47 +19,45 @@ valid_file = False
 normalized_columns = {}
 
 if file:
-try:
-if file.name.endswith(".csv"):
-df = pd.read_csv(file)
-elif file.name.endswith(".xlsx"):
-df = pd.read_excel(file)
+    try:
+        if file.name.endswith(".csv"):
+            df = pd.read_csv(file)
+        elif file.name.endswith(".xlsx"):
+            df = pd.read_excel(file)
 
-# Normalize column names to lowercase for comparison
-normalized_columns = {col.lower(): col for col in df.columns}
-required_columns = {'name', 'email', 'password'}
+        # Normalize column names to lowercase
+        normalized_columns = {col.lower(): col for col in df.columns}
+        required_columns = {'name', 'email', 'password'}
 
-if required_columns.issubset(normalized_columns):
-# Rename columns for consistency
-df.rename(columns={normalized_columns['name']: 'Name',
-normalized_columns['email']: 'Email',
-normalized_columns['password']: 'Password'}, inplace=True)
-valid_file = True
-else:
-st.error("❗ File must contain the following columns: Name, Email, Password")
-df = None
-
-except Exception as e:
-st.error(f"❌ Failed to read file: {e}")
-df = None
+        if required_columns.issubset(normalized_columns):
+            df.rename(columns={
+                normalized_columns['name']: 'Name',
+                normalized_columns['email']: 'Email',
+                normalized_columns['password']: 'Password'
+            }, inplace=True)
+            valid_file = True
+        else:
+            st.error("❗ File must contain columns: Name, Email, Password")
+            df = None
+    except Exception as e:
+        st.error(f"❌ Failed to read file: {e}")
+        df = None
 
 # Step 2: Input Gmail credentials
 with st.expander("🔐 Email Credentials"):
-sender_email = st.text_input("Your Gmail Address", placeholder="your@email.com")
-app_password = st.text_input("Gmail App Password", type="password")
+    sender_email = st.text_input("Your Gmail Address", placeholder="your@email.com")
+    app_password = st.text_input("Gmail App Password", type="password")
 
-# Step 3: Input CC, BCC, Subject
+# Step 3: CC, BCC, and Subject
 with st.expander("📬 Email Settings"):
-cc_emails_input = st.text_area("CC Emails (comma/line-separated)", height=80)
-bcc_emails_input = st.text_area("BCC Emails (comma/line-separated)", height=80)
-subject = st.text_input("Email Subject", value="Welcome to Our Platform!")
+    cc_input = st.text_area("CC Emails (comma or newline separated)", height=80)
+    bcc_input = st.text_area("BCC Emails (comma or newline separated)", height=80)
+    subject = st.text_input("Email Subject", value="Welcome to Our Platform!")
 
-# Helper function to validate email address
-# Helper function to validate email address format
+# Email validation
 def is_valid_email(email):
-return re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
+    return re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
 
-# Optional: MX record validation (basic email existence check)
 def email_exists(email):
     domain = email.split('@')[-1]
     try:
@@ -68,129 +66,95 @@ def email_exists(email):
     except:
         return False
 
-# Process CC and BCC inputs
-cc_emails = [email.strip() for line in cc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
-bcc_emails = [email.strip() for line in bcc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
+# Parse CC/BCC
+cc_emails = [e.strip() for line in cc_input.splitlines() for e in line.split(',') if e.strip() and is_valid_email(e.strip())]
+bcc_emails = [e.strip() for line in bcc_input.splitlines() for e in line.split(',') if e.strip() and is_valid_email(e.strip())]
 
-# Email body and signature editor
+# Step 4: Compose Email
 st.subheader("📄 Email Body")
 html_body = st_quill(
-value="""
+    value="""
 <p><strong>Dear {name},</strong></p>
-<p style=\"text-align: justify;\">We are excited to announce that we have created new company email accounts for all employees using Microsoft Outlook! This upgrade is part of our ongoing effort to improve communication and collaboration within the company.</p>
+<p style="text-align: justify;">We are excited to announce that we have created new company email accounts for all employees using Microsoft Outlook!</p>
 <p><strong>Your New Email Address:</strong> <span style='background-color: #FFFF00'>{email}</span><br>
 <strong>Temporary Password:</strong> <span style='background-color: #90EE90'>{password}</span></p>
-<p><strong>Important Email Account Transition Information:</strong></p>
-<ul>
- <li><strong>Google Drive Data and Emails:</strong> All emails and files from existing company domain (*@invesmate.com) user accounts have already been migrated to the new Outlook accounts.</li>
- <li><strong>Google Workspace Account Deactivation:</strong> Your existing *@invesmate.com Gmail accounts will be deactivated on <strong>April 25, 2025 at 11PM</strong>.</li>
- <li><strong>Individual Gmail Account Deactivation:</strong> If you are using an individual Gmail account (*.invesmate@gmail.com), please move important files to your company OneDrive. These accounts will be disabled for company use within one week.</li>
-</ul>
-<p><strong>Accessing Your Accounts:</strong></p>
-<ul>
- <li><a href='https://play.google.com/store/apps/details?id=com.azure.authenticator'>Microsoft Authenticator</a></li>
- <li><a href='https://outlook.office.com/mail/'>Outlook Web App</a></li>
- <li><a href='https://teams.microsoft.com/v2/'>Microsoft Teams</a></li>
- <li><a href='https://admininvesmate360-my.sharepoint.com/'>OneDrive</a></li>
- <li><a href='https://m365.cloud.microsoft/launch/excel'>Excel</a></li>
- <li><a href='https://m365.cloud.microsoft/launch/word'>Docs</a></li>
-</ul>
-<p><strong>How to Login to Outlook:</strong></p>
-<ol>
- <li>Go to the Outlook Web App link provided above.</li>
- <li>Enter your new email address.</li>
- <li>Enter the temporary password provided above.</li>
-  <li>Create a new secure password. <br><li>Minimum 8 characters. Use uppercase, lowercase, numbers, and symbols.</li></li>
-  <li>Create a new secure password.<br>Minimum 8 characters. Use uppercase, lowercase, numbers, and symbols.</li>
-</ol>
-<p><strong>Helpful Resources:</strong></p>
-<ul>
- <li><a href='https://youtu.be/HCxNXgg4GKE'>Outlook Setup Video</a></li>
- <li><a href='https://youtu.be/faDI4svhtTY'>Microsoft Apps Demo</a></li>
-</ul>
-<p>If you have any questions or need assistance, please do not hesitate to contact us.</p>
-<p style='margin-top: 30px;'>
-Regards,<br>
-<strong>Your Name</strong><br>
-Admin Support Team<br>
-<a href='https://invesmate.com'>www.invesmate.com</a>
-IT Support Team<br>
-<a href='https://invesmate.com'>invesmate.com</a>
-</p>
+<p>Access your account via Outlook Web App, set a secure password, and begin using the Microsoft 365 tools.</p>
+<p>Regards,<br><strong>Your Name</strong><br>IT Support<br><a href='https://invesmate.com'>invesmate.com</a></p>
 <img src='https://yourserver.com/track_open.png?email={email}' width='1' height='1' style='display:none'>
-""",
-html=True,
-key="rich_email_body"
+    """,
+    html=True,
+    key="rich_body"
 )
 
-# Preview
-with st.expander("🔍 Preview Final Email with Sample Data"):
+# Step 5: Preview with sample data
+with st.expander("🔍 Preview Final Email"):
+    if valid_file:
+        sample_preview = html_body.format(name="John Doe", email="john@example.com", password="12345678")
+        st.markdown(sample_preview, unsafe_allow_html=True)
+
+# Step 6: View/edit data and send emails
 if valid_file:
-preview_filled = html_body.format(name="John Doe", email="john@example.com", password="12345678")
-st.markdown(preview_filled, unsafe_allow_html=True)
+    df["Send"] = True
+    st.subheader("📋 Preview and Toggle Send")
+    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True,
+                               column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)})
 
-# Step 5: Load Excel/CSV and send emails
-if valid_file:
-df["Send"] = True
-st.subheader("📄 Preview and Modify Data")
-edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)})
+    if st.button("📬 Send Emails Now"):
+        if not sender_email or not app_password:
+            st.warning("⚠️ Enter your email and app password to send.")
+        else:
+            success_count = 0
+            failed_count = 0
+            logs = []
 
-if st.button("📬 Send Emails"):
-if not (sender_email and app_password):
-st.warning("⚠️ Please provide your email and app password.")
-else:
-log_data = []
-success_count, failed_count = 0, 0
-for index, row in edited_df.iterrows():
-if not row.get("Send", True):
-continue
+            for idx, row in edited_df.iterrows():
+                if not row.get("Send", True):
+                    continue
 
-recipient = row['Email']
-name = row.get('Name', 'Customer')
-password = row.get('Password', 'Not Provided')
+                name = row.get('Name', 'User')
+                recipient = row['Email']
+                password = row['Password']
 
-                if not is_valid_email(recipient):
-                    st.error(f"❌ Invalid email format for {name} ({recipient}), skipping.")
                 if not is_valid_email(recipient) or not email_exists(recipient):
-                    st.error(f"❌ Invalid or non-existent email for {name} ({recipient}), skipping.")
-failed_count += 1
-continue
+                    st.error(f"❌ Invalid or non-existent email for {name} ({recipient})")
+                    failed_count += 1
+                    logs.append([name, recipient, "Invalid Email", datetime.now()])
+                    continue
 
-msg = MIMEMultipart("alternative")
-msg['From'] = sender_email
-msg['To'] = recipient
-msg['Subject'] = subject
+                # Compose message
+                msg = MIMEMultipart("alternative")
+                msg['From'] = sender_email
+                msg['To'] = recipient
+                msg['Subject'] = subject
+                if cc_emails:
+                    msg['Cc'] = ", ".join(cc_emails)
 
-if cc_emails:
-msg['Cc'] = ", ".join(cc_emails)
+                filled_body = html_body.format(name=name, email=recipient, password=password)
+                msg.attach(MIMEText(filled_body, 'html'))
+                to_list = [recipient] + cc_emails + bcc_emails
 
-filled_body = html_body.format(name=name, email=recipient, password=password)
-msg.attach(MIMEText(filled_body, 'html'))
+                try:
+                    with smtplib.SMTP("smtp.gmail.com", 587) as server:
+                        server.starttls()
+                        server.login(sender_email, app_password)
+                        response = server.sendmail(sender_email, to_list, msg.as_string())
 
-to_addrs = [recipient] + cc_emails + bcc_emails
+                    if recipient not in response:
+                        st.success(f"✅ Sent to {name} ({recipient})")
+                        success_count += 1
+                        logs.append([name, recipient, "Success", datetime.now()])
+                    else:
+                        st.error(f"❌ SMTP error for {name} ({recipient})")
+                        failed_count += 1
+                        logs.append([name, recipient, "SMTP Error", datetime.now()])
+                except Exception as e:
+                    st.error(f"❌ Exception for {name} ({recipient}): {e}")
+                    failed_count += 1
+                    logs.append([name, recipient, f"Exception: {e}", datetime.now()])
 
-try:
-with smtplib.SMTP("smtp.gmail.com", 587) as server:
-server.starttls()
-server.login(sender_email, app_password)
-response = server.sendmail(sender_email, to_addrs, msg.as_string())
+            st.info(f"📬 Emails sent: {success_count} | ❌ Failed: {failed_count}")
 
-if recipient not in response:
-st.success(f"✅ Email sent to {name} ({recipient})")
-success_count += 1
-log_data.append([name, recipient, "Success", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
-else:
-st.error(f"❌ SMTP error for {name} ({recipient})")
-failed_count += 1
-log_data.append([name, recipient, "SMTP Rejected", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
-except Exception as e:
-st.error(f"❌ Failed for {name} ({recipient}): {e}")
-failed_count += 1
-log_data.append([name, recipient, f"Exception: {e}", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
-
-st.info(f"✅ Sent: {success_count}, ❌ Failed: {failed_count}")
-
-log_df = pd.DataFrame(log_data, columns=["Name", "Email", "Status", "Timestamp"])
-csv_buffer = BytesIO()
-log_df.to_csv(csv_buffer, index=False)
-st.download_button("📥 Download Log CSV", data=csv_buffer.getvalue(), file_name="email_log.csv", mime="text/csv")
+            log_df = pd.DataFrame(logs, columns=["Name", "Email", "Status", "Timestamp"])
+            buffer = BytesIO()
+            log_df.to_csv(buffer, index=False)
+            st.download_button("📥 Download Email Log", buffer.getvalue(), file_name="email_log.csv", mime="text/csv")

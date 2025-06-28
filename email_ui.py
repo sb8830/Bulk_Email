@@ -16,7 +16,8 @@ st.title("📧 Bulk Email Sender")
 sample_data = pd.DataFrame({
     "Name": ["John Doe", "Jane Smith"],
     "Email": ["john.doe@example.com", "jane.smith@example.com"],
-    "Password": ["Pass@1234", "Secure#2024"]
+    "Password": ["Pass@1234", "Secure#2024"],
+    "Sending Email": ["sender1@example.com", "sender2@example.com"]
 })
 
 st.download_button(
@@ -41,17 +42,18 @@ if file:
 
         # Normalize column names to lowercase
         normalized_columns = {col.lower(): col for col in df.columns}
-        required_columns = {'name', 'email', 'password'}
+        required_columns = {'name', 'email', 'password', 'sending email'}
 
         if required_columns.issubset(normalized_columns):
             df.rename(columns={
                 normalized_columns['name']: 'Name',
                 normalized_columns['email']: 'Email',
-                normalized_columns['password']: 'Password'
+                normalized_columns['password']: 'Password',
+                normalized_columns['sending email']: 'Sending Email'
             }, inplace=True)
             valid_file = True
         else:
-            st.error("❗ File must contain columns: Name, Email, Password")
+            st.error("❗ File must contain columns: Name, Email, Password, Sending Email")
             df = None
     except Exception as e:
         st.error(f"❌ Failed to read file: {e}")
@@ -133,70 +135,3 @@ html_body = st_quill(
 with st.expander("🔍 Preview Final Email"):
     sample_preview = html_body.format(name="John Doe", email="john@example.com", password="Pass@1234")
     st.markdown(sample_preview, unsafe_allow_html=True)
-
-# Step 6: View/edit data and send emails
-if valid_file:
-    df["Send"] = True
-    st.subheader("📋 Preview and Toggle Send")
-    edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True,
-                               column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)})
-
-    if st.button("📬 Send Emails Now"):
-        if not sender_email or not app_password:
-            st.warning("⚠️ Enter your email and app password to send.")
-        else:
-            success_count = 0
-            failed_count = 0
-            logs = []
-
-            for idx, row in edited_df.iterrows():
-                if not row.get("Send", True):
-                    continue
-
-                name = row.get('Name', 'User')
-                recipient = row['Email']
-                password = row['Password']
-
-                if not is_valid_email(recipient) or not email_exists(recipient):
-                    st.error(f"❌ Invalid or non-existent email for {name} ({recipient})")
-                    failed_count += 1
-                    logs.append([name, recipient, "Invalid Email", datetime.now()])
-                    continue
-
-                # Compose message
-                msg = MIMEMultipart("alternative")
-                msg['From'] = sender_email
-                msg['To'] = recipient
-                msg['Subject'] = subject
-                if cc_emails:
-                    msg['Cc'] = ", ".join(cc_emails)
-
-                filled_body = html_body.format(name=name, email=recipient, password=password)
-                msg.attach(MIMEText(filled_body, 'html'))
-                to_list = [recipient] + cc_emails + bcc_emails
-
-                try:
-                    with smtplib.SMTP("smtp.gmail.com", 587) as server:
-                        server.starttls()
-                        server.login(sender_email, app_password)
-                        response = server.sendmail(sender_email, to_list, msg.as_string())
-
-                    if recipient not in response:
-                        st.success(f"✅ Sent to {name} ({recipient})")
-                        success_count += 1
-                        logs.append([name, recipient, "Success", datetime.now()])
-                    else:
-                        st.error(f"❌ SMTP error for {name} ({recipient})")
-                        failed_count += 1
-                        logs.append([name, recipient, "SMTP Error", datetime.now()])
-                except Exception as e:
-                    st.error(f"❌ Exception for {name} ({recipient}): {e}")
-                    failed_count += 1
-                    logs.append([name, recipient, f"Exception: {e}", datetime.now()])
-
-            st.info(f"📬 Emails sent: {success_count} | ❌ Failed: {failed_count}")
-
-            log_df = pd.DataFrame(logs, columns=["Name", "Email", "Status", "Timestamp"])
-            buffer = BytesIO()
-            log_df.to_csv(buffer, index=False)
-            st.download_button("📥 Download Email Log", buffer.getvalue(), file_name="email_log.csv", mime="text/csv")

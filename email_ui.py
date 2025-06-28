@@ -7,30 +7,34 @@ import re
 from st_aggrid import AgGrid
 from st_quill import st_quill
 
+# --------------- CONFIGURE EMAIL CREDENTIALS ---------------- #
+SENDER_EMAIL = "YOUR_EMAIL@gmail.com"
+SENDER_PASSWORD = "YOUR_APP_PASSWORD"  # Use App Password from Google
+USE_SSL = False  # Set to True to use SSL on port 465
+
 # --------------- Email Validation ---------------- #
 def is_valid_email(email):
     pattern = r'^[\w\.-]+@[\w\.-]+\.\w+$'
     return re.match(pattern, email)
 
 # --------------- Send Email Function ---------------- #
-def send_email(to_email, subject, body, sender_email, sender_password, use_ssl=False):
+def send_email(to_email, subject, body):
     try:
         msg = MIMEMultipart()
-        msg['From'] = sender_email
+        msg['From'] = SENDER_EMAIL
         msg['To'] = to_email
         msg['Subject'] = subject
         msg.attach(MIMEText(body, 'html'))
 
-        if use_ssl:
+        if USE_SSL:
             server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
         else:
             server = smtplib.SMTP('smtp.gmail.com', 587)
             server.starttls()
 
-        server.login(sender_email, sender_password)
-        server.sendmail(sender_email, to_email, msg.as_string())
+        server.login(SENDER_EMAIL, SENDER_PASSWORD)
+        server.sendmail(SENDER_EMAIL, to_email, msg.as_string())
         server.quit()
-
         return 'Success ✅'
     except Exception as e:
         print(f"[Error] {to_email}: {e}")
@@ -38,23 +42,10 @@ def send_email(to_email, subject, body, sender_email, sender_password, use_ssl=F
 
 # --------------- Streamlit UI ---------------- #
 st.set_page_config(page_title="Bulk Email Sender", layout="centered")
-st.title("📧 Bulk Email Sender using Gmail SMTP")
-
-# ---------- SMTP Setup Section ----------- #
-with st.sidebar:
-    st.header("1. SMTP Configuration")
-    sender_email = st.text_input("Gmail Address", placeholder="you@gmail.com")
-    sender_password = st.text_input("App Password", placeholder="Use 16-digit app password", type="password")
-    use_ssl = st.checkbox("Use SSL (port 465)?", value=False)
-
-    st.markdown("""
-    🔐 **Note:**
-    - Enable **2-Step Verification** on your Gmail account
-    - Generate a **16-digit App Password** at [https://myaccount.google.com/apppasswords](https://myaccount.google.com/apppasswords)
-    """)
+st.title("📧 Bulk Email Sender")
 
 # ---------- File Upload ----------- #
-st.sidebar.header("2. Upload Excel or CSV")
+st.sidebar.header("Upload Excel or CSV")
 uploaded_file = st.sidebar.file_uploader("Upload File", type=["xlsx", "csv"])
 
 # ---------- File Processing ----------- #
@@ -79,8 +70,8 @@ if uploaded_file:
 
             # Send Emails
             if st.button("📤 Send Emails Now"):
-                if not sender_email or not sender_password or not subject or not body:
-                    st.warning("⚠️ Please complete all fields (Email, Password, Subject, Body)")
+                if not subject or not body:
+                    st.warning("⚠️ Subject and Email Body are required.")
                 else:
                     status_list = []
                     for idx, row in df.iterrows():
@@ -88,7 +79,7 @@ if uploaded_file:
                         if pd.isna(email) or not is_valid_email(email):
                             status = "Invalid Email ❌"
                         else:
-                            status = send_email(email, subject, body, sender_email, sender_password, use_ssl)
+                            status = send_email(email, subject, body)
                         status_list.append(status)
 
                     df['Status'] = status_list

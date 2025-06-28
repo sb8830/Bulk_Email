@@ -1,153 +1,196 @@
+import pandas as pd
+import smtplib
+import re
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+import streamlit as st
 from streamlit_quill import st_quill
 from io import BytesIO
 from datetime import datetime
 import dns.resolver
-import time
 
-# Page settings
-@@ -15,11 +16,11 @@
-st.sidebar.image("https://www.invesmate.com/assets/images/logo.png", width=200)
-st.sidebar.markdown("Developed by Invesmate Admin Team")
+st.set_page_config(page_title="Bulk Email Sender", layout="wide")
+st.title("📧 Bulk Email Sender")
 
-# Step 1: Upload or Create file
-st.header("1️⃣ Upload or Create Recipient Data")
-# Step 1: Upload file
-st.header("1️⃣ Upload Recipient Data")
-file = st.file_uploader("Upload an Excel or CSV file", type=["xlsx", "csv"])
-if "data" not in st.session_state:
-    st.session_state.data = pd.DataFrame(columns=["Name", "Email", "ID", "Password", "Send"])
-    st.session_state.data = None
+# Step 1: Upload Excel or CSV file
+file = st.file_uploader("Upload Excel or CSV file", type=["xlsx", "csv"])
+df = None
+valid_file = False
+normalized_columns = {}
 
 if file:
 try:
-@@ -39,4 +40,129 @@
-}, inplace=True)
-df['Send'] = True
-st.session_state.data = df
-            st.success("✅ File
-            st.success("✅ File uploaded and validated successfully!")
-        else:
-            st.error("❗ Required columns missing: name, sender email, email id, password")
-    except Exception as e:
-        st.error(f"❌ Failed to read file: {e}")
+if file.name.endswith(".csv"):
+df = pd.read_csv(file)
+elif file.name.endswith(".xlsx"):
+df = pd.read_excel(file)
 
-# Step 2: Email credentials
-st.header("2️⃣ Setup Email Credentials")
-with st.expander("🔒 Gmail Login"):
-    sender_email = st.text_input("Gmail Address", placeholder="you@gmail.com")
-    app_password = st.text_input("Gmail App Password", type="password")
+# Normalize column names to lowercase for comparison
+normalized_columns = {col.lower(): col for col in df.columns}
+required_columns = {'name', 'email', 'password'}
 
-# Step 3: Email Settings
-st.header("3️⃣ Configure Email Settings")
-with st.expander("✉️ CC / BCC / Subject Settings"):
-    cc_emails_input = st.text_area("CC Emails (comma/line-separated)", height=70)
-    bcc_emails_input = st.text_area("BCC Emails (comma/line-separated)", height=70)
-    subject = st.text_input("Email Subject", value="Welcome to Invesmate!")
-    delay = st.slider("⏱ Delay between emails (seconds)", 0, 60, 2)
+if required_columns.issubset(normalized_columns):
+# Rename columns for consistency
+df.rename(columns={normalized_columns['name']: 'Name',
+normalized_columns['email']: 'Email',
+normalized_columns['password']: 'Password'}, inplace=True)
+valid_file = True
+else:
+st.error("❗ File must contain the following columns: Name, Email, Password")
+df = None
 
-# Helpers
+except Exception as e:
+st.error(f"❌ Failed to read file: {e}")
+df = None
+
+# Step 2: Input Gmail credentials
+with st.expander("🔐 Email Credentials"):
+sender_email = st.text_input("Your Gmail Address", placeholder="your@email.com")
+app_password = st.text_input("Gmail App Password", type="password")
+
+# Step 3: Input CC, BCC, Subject
+with st.expander("📬 Email Settings"):
+cc_emails_input = st.text_area("CC Emails (comma/line-separated)", height=80)
+bcc_emails_input = st.text_area("BCC Emails (comma/line-separated)", height=80)
+subject = st.text_input("Email Subject", value="Welcome to Our Platform!")
+
+# Helper function to validate email address
+# Helper function to validate email address format
 def is_valid_email(email):
-    return bool(re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", str(email)))
+return re.match(r"[^@\s]+@[^@\s]+\.[^@\s]+", email)
 
-def highlight_invalid_cells(row):
-    styles = [''] * len(row)
-    if not is_valid_email(row['Email']):
-        styles[row.index.get_loc('Email')] = 'background-color: #FFD6D6;'
-    if not is_valid_email(row['ID']):
-        styles[row.index.get_loc('ID')] = 'background-color: #FFD6D6;'
-    if pd.isna(row['Password']) or row['Password'] == '':
-        styles[row.index.get_loc('Password')] = 'background-color: #FFD6D6;'
-    return styles
+# Optional: MX record validation (basic email existence check)
+def email_exists(email):
+    domain = email.split('@')[-1]
+    try:
+        answers = dns.resolver.resolve(domain, 'MX')
+        return len(answers) > 0
+    except:
+        return False
 
-# Process CC, BCC
-cc_emails = [e.strip() for l in cc_emails_input.splitlines() for e in l.split(',') if is_valid_email(e.strip())]
-bcc_emails = [e.strip() for l in bcc_emails_input.splitlines() for e in l.split(',') if is_valid_email(e.strip())]
+# Process CC and BCC inputs
+cc_emails = [email.strip() for line in cc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
+bcc_emails = [email.strip() for line in bcc_emails_input.splitlines() for email in line.split(',') if email.strip() and is_valid_email(email.strip())]
 
-# Step 4: Compose email
-st.header("4️⃣ Compose Email Body")
+# Email body and signature editor
+st.subheader("📄 Email Body")
 html_body = st_quill(
-    value="""
+value="""
 <p><strong>Dear {name},</strong></p>
-<p>Welcome to Invesmate! Your company account has been created.</p>
-<p><strong>Email:</strong> {id}<br><strong>Temporary Password:</strong> {password}</p>
-<p>🔗 Access your account: <a href='https://outlook.office.com/mail/'>Outlook</a></p>
-<p>For any help, contact Admin Support.</p>
-<p>Regards,<br><strong>Invesmate Team</strong></p>
-<img src='https://www.invesmate.com/tracking_open.png?email={email}' width='1' height='1' style='display:none'>
+<p style=\"text-align: justify;\">We are excited to announce that we have created new company email accounts for all employees using Microsoft Outlook! This upgrade is part of our ongoing effort to improve communication and collaboration within the company.</p>
+<p><strong>Your New Email Address:</strong> <span style='background-color: #FFFF00'>{email}</span><br>
+<strong>Temporary Password:</strong> <span style='background-color: #90EE90'>{password}</span></p>
+<p><strong>Important Email Account Transition Information:</strong></p>
+<ul>
+ <li><strong>Google Drive Data and Emails:</strong> All emails and files from existing company domain (*@invesmate.com) user accounts have already been migrated to the new Outlook accounts.</li>
+ <li><strong>Google Workspace Account Deactivation:</strong> Your existing *@invesmate.com Gmail accounts will be deactivated on <strong>April 25, 2025 at 11PM</strong>.</li>
+ <li><strong>Individual Gmail Account Deactivation:</strong> If you are using an individual Gmail account (*.invesmate@gmail.com), please move important files to your company OneDrive. These accounts will be disabled for company use within one week.</li>
+</ul>
+<p><strong>Accessing Your Accounts:</strong></p>
+<ul>
+ <li><a href='https://play.google.com/store/apps/details?id=com.azure.authenticator'>Microsoft Authenticator</a></li>
+ <li><a href='https://outlook.office.com/mail/'>Outlook Web App</a></li>
+ <li><a href='https://teams.microsoft.com/v2/'>Microsoft Teams</a></li>
+ <li><a href='https://admininvesmate360-my.sharepoint.com/'>OneDrive</a></li>
+ <li><a href='https://m365.cloud.microsoft/launch/excel'>Excel</a></li>
+ <li><a href='https://m365.cloud.microsoft/launch/word'>Docs</a></li>
+</ul>
+<p><strong>How to Login to Outlook:</strong></p>
+<ol>
+ <li>Go to the Outlook Web App link provided above.</li>
+ <li>Enter your new email address.</li>
+ <li>Enter the temporary password provided above.</li>
+  <li>Create a new secure password. <br><li>Minimum 8 characters. Use uppercase, lowercase, numbers, and symbols.</li></li>
+  <li>Create a new secure password.<br>Minimum 8 characters. Use uppercase, lowercase, numbers, and symbols.</li>
+</ol>
+<p><strong>Helpful Resources:</strong></p>
+<ul>
+ <li><a href='https://youtu.be/HCxNXgg4GKE'>Outlook Setup Video</a></li>
+ <li><a href='https://youtu.be/faDI4svhtTY'>Microsoft Apps Demo</a></li>
+</ul>
+<p>If you have any questions or need assistance, please do not hesitate to contact us.</p>
+<p style='margin-top: 30px;'>
+Regards,<br>
+<strong>Your Name</strong><br>
+Admin Support Team<br>
+<a href='https://invesmate.com'>www.invesmate.com</a>
+IT Support Team<br>
+<a href='https://invesmate.com'>invesmate.com</a>
+</p>
+<img src='https://yourserver.com/track_open.png?email={email}' width='1' height='1' style='display:none'>
 """,
-    html=True,
-    key="rich_email_body"
+html=True,
+key="rich_email_body"
 )
 
-# Step 5: Preview, Edit, and Send
-if st.session_state.data is not None:
-    st.header("5️⃣ Review, Edit, and Send")
-    
-    edited_df = st.data_editor(
-        st.session_state.data,
-        num_rows="dynamic",
-        use_container_width=True,
-        column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)}
-    )
-    st.session_state.data = edited_df.copy()
+# Preview
+with st.expander("🔍 Preview Final Email with Sample Data"):
+if valid_file:
+preview_filled = html_body.format(name="John Doe", email="john@example.com", password="12345678")
+st.markdown(preview_filled, unsafe_allow_html=True)
 
-    styled_df = edited_df.style.apply(highlight_invalid_cells, axis=1)
-    st.dataframe(styled_df, use_container_width=True)
+# Step 5: Load Excel/CSV and send emails
+if valid_file:
+df["Send"] = True
+st.subheader("📄 Preview and Modify Data")
+edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, column_config={"Send": st.column_config.CheckboxColumn(label="Send", default=True)})
 
-    if st.button("🚀 Send Bulk Emails"):
-        if not (sender_email and app_password):
-            st.warning("⚠️ Please provide Gmail address and app password.")
-        else:
-            progress = st.progress(0)
-            log_data = []
-            success, failure = 0, 0
-            to_send_df = st.session_state.data[st.session_state.data['Send'] == True]
-            total = len(to_send_df)
+if st.button("📬 Send Emails"):
+if not (sender_email and app_password):
+st.warning("⚠️ Please provide your email and app password.")
+else:
+log_data = []
+success_count, failed_count = 0, 0
+for index, row in edited_df.iterrows():
+if not row.get("Send", True):
+continue
 
-            for i, (index, row) in enumerate(to_send_df.iterrows()):
-                recipient = row['Email']
-                name = row['Name']
-                user_id = row['ID']
-                pwd = row['Password']
+recipient = row['Email']
+name = row.get('Name', 'Customer')
+password = row.get('Password', 'Not Provided')
 
-                if not (is_valid_email(recipient) and is_valid_email(user_id) and pwd):
-                    st.error(f"❌ Skipping {name} ({recipient}): Invalid Email/ID/Password.")
-                    failure += 1
-                    continue
+                if not is_valid_email(recipient):
+                    st.error(f"❌ Invalid email format for {name} ({recipient}), skipping.")
+                if not is_valid_email(recipient) or not email_exists(recipient):
+                    st.error(f"❌ Invalid or non-existent email for {name} ({recipient}), skipping.")
+failed_count += 1
+continue
 
-                try:
-                    msg = MIMEMultipart("alternative")
-                    msg['From'] = sender_email
-                    msg['To'] = recipient
-                    msg['Subject'] = subject
-                    if cc_emails:
-                        msg['Cc'] = ", ".join(cc_emails)
+msg = MIMEMultipart("alternative")
+msg['From'] = sender_email
+msg['To'] = recipient
+msg['Subject'] = subject
 
-                    filled_body = html_body.format(name=name, email=recipient, id=user_id, password=pwd)
-                    msg.attach(MIMEText(filled_body, 'html'))
+if cc_emails:
+msg['Cc'] = ", ".join(cc_emails)
 
-                    to_addresses = [recipient] + cc_emails + bcc_emails
+filled_body = html_body.format(name=name, email=recipient, password=password)
+msg.attach(MIMEText(filled_body, 'html'))
 
-                    with smtplib.SMTP("smtp.gmail.com", 587) as server:
-                        server.starttls()
-                        server.login(sender_email, app_password)
-                        server.sendmail(sender_email, to_addresses, msg.as_string())
+to_addrs = [recipient] + cc_emails + bcc_emails
 
-                    st.success(f"✅ Sent to {name} ({recipient})")
-                    success += 1
-                    log_data.append([name, recipient, "Success", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
+try:
+with smtplib.SMTP("smtp.gmail.com", 587) as server:
+server.starttls()
+server.login(sender_email, app_password)
+response = server.sendmail(sender_email, to_addrs, msg.as_string())
 
-                except Exception as e:
-                    st.error(f"❌ Failed to send to {name}: {str(e)}")
-                    failure += 1
-                    log_data.append([name, recipient, f"Failed: {str(e)}", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
+if recipient not in response:
+st.success(f"✅ Email sent to {name} ({recipient})")
+success_count += 1
+log_data.append([name, recipient, "Success", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
+else:
+st.error(f"❌ SMTP error for {name} ({recipient})")
+failed_count += 1
+log_data.append([name, recipient, "SMTP Rejected", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
+except Exception as e:
+st.error(f"❌ Failed for {name} ({recipient}): {e}")
+failed_count += 1
+log_data.append([name, recipient, f"Exception: {e}", datetime.now().strftime('%Y-%m-%d %H:%M:%S')])
 
-                time.sleep(delay)
-                progress.progress((i + 1) / total)
+st.info(f"✅ Sent: {success_count}, ❌ Failed: {failed_count}")
 
-            st.info(f"📢 Summary: {success} Sent | {failure} Failed")
-
-            log_df = pd.DataFrame(log_data, columns=["Name", "Email", "Status", "Timestamp"])
-            buffer = BytesIO()
-            log_df.to_csv(buffer, index=False)
-            st.download_button("📥 Download Log File", data=buffer.getvalue(), file_name="email_log.csv", mime="text/csv")
+log_df = pd.DataFrame(log_data, columns=["Name", "Email", "Status", "Timestamp"])
+csv_buffer = BytesIO()
+log_df.to_csv(csv_buffer, index=False)
+st.download_button("📥 Download Log CSV", data=csv_buffer.getvalue(), file_name="email_log.csv", mime="text/csv")

@@ -111,8 +111,7 @@ html_body = st_quill(
 </ul>
 <p><strong>How to Login to Outlook:</strong></p>
 <ol>
-<li>Go to the Outlook Web App link provided above.</li>
-<li>Enter your new email address.</li>
+<li>Go to the Outlook Web App link provided above.</li><li>Enter your new email address.</li>
 <li>Enter the temporary password provided above.</li>
 <li>You will then be prompted to create a new, more secure password.</li>
 <li>Follow the on-screen instructions to complete the login process.</li>

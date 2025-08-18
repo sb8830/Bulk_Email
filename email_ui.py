@@ -107,9 +107,7 @@ html_body = st_quill(
 <li>Go to the Outlook Web App link provided above.</li><li>Enter your new email address.</li><li>Enter the temporary password provided above.</li><li>You will then be prompted to create a new, more secure password.</li><li>Follow the on-screen instructions to complete the login process.</li>
 </ol>
 <p><strong>Helpful Resources:</strong></p>
-<ul>
-<li>Outlook Setup</li><li>Microsoft Apps Quick Guide</li>
-</ul>
+<ul><li>Outlook Setup</li><li>Microsoft Apps Quick Guide</li></ul>
 <p><strong>Support:</strong> If you have any questions or need assistance with accessing your new account, please do not hesitate to contact us.</p>
 <p>We are confident that these new tools will enhance our communication and productivity. We appreciate your cooperation during this transition.</p>
 <p><strong>Thanks and Regards,</strong></p>

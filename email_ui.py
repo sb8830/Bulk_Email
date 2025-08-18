@@ -99,13 +99,13 @@ html_body = st_quill(
 <li><strong>Google Drive Data and Emails:</strong> All emails and files from existing company domain(*@invesmategroup.com) user accounts have already been migrated to the new Outlook accounts.</li><li><strong>Google Workspace Account Deactivation(@invesmategroup.com):</strong> Your existing company domain(@invesmategroup.com) Gmail accounts will be deactivated on 30Th June, 2025. After this date, you will no longer be able to Open account from Gmail.</li><li><strong>Individual Gmail Account Deactivation(*.invesmategroup@.com in GSUTE):</strong> You will need to move any important files to your company OneDrive as soon as possible. Your G-Sute accounts will be disabled for company use within The mentioned date if anything missing in your one drive.</li>
 </ul>
 <p><strong>Accessing Your Accounts:</strong></p>
-<ul>
-<li>Outlook Web App: <a href='https://outlook.office.com/mail/'>https://outlook.office.com/mail/</a></li><li>Microsoft Teams: <a href='https://teams.microsoft.com/v2/'>https://teams.microsoft.com/v2/</a></li><li>OneDrive: <a href='https://admininvesmate360-my.sharepoint.com/'>https://admininvesmate360-my.sharepoint.com/</a></li><li>Excel: <a href='https://m365.cloud.microsoft/launch/excel'>https://m365.cloud.microsoft/launch/excel</a></li><li>Docs: <a href='https://m365.cloud.microsoft/launch/word'>https://m365.cloud.microsoft/launch/word</a></li><li>Microsoft Authenticator: <a href='https://play.google.com/store/apps/details?id=com.azure.authenticator'>Google Play</a></li>
-</ul>
+
+<ul><li>Outlook Web App: <a href='https://outlook.office.com/mail/'>https://outlook.office.com/mail/</a></li><li>Microsoft Teams: <a href='https://teams.microsoft.com/v2/'>https://teams.microsoft.com/v2/</a></li><li>OneDrive: <a href='https://admininvesmate360-my.sharepoint.com/'>https://admininvesmate360-my.sharepoint.com/</a></li><li>Excel: <a href='https://m365.cloud.microsoft/launch/excel'>https://m365.cloud.microsoft/launch/excel</a></li><li>Docs: <a href='https://m365.cloud.microsoft/launch/word'>https://m365.cloud.microsoft/launch/word</a></li><li>Microsoft Authenticator: <a href='https://play.google.com/store/apps/details?id=com.azure.authenticator'>Google Play</a></li></ul>
+
 <p><strong>How to Login to Outlook:</strong></p>
-<ol>
-<li>Go to the Outlook Web App link provided above.</li><li>Enter your new email address.</li><li>Enter the temporary password provided above.</li><li>You will then be prompted to create a new, more secure password.</li><li>Follow the on-screen instructions to complete the login process.</li>
-</ol>
+
+<ol><li>Go to the Outlook Web App link provided above.</li><li>Enter your new email address.</li><li>Enter the temporary password provided above.</li><li>You will then be prompted to create a new, more secure password.</li><li>Follow the on-screen instructions to complete the login process.</li></ol>
+
 <p><strong>Helpful Resources:</strong></p>
 
 <ul><li>Outlook Setup</li><li>Microsoft Apps Quick Guide</li></ul>
